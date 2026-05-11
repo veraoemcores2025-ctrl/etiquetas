@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Impressor de etiquetas ZPL</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>Etiquetas ZPL em lotes</h1>
+            <p>Suba até 200 etiquetas da Shopee, wBuy ou transportadora e baixe um PDF 4x6 pronto para imprimir.</p>
+          </div>
+          <div class="printer-pill">Impressora padrão: <strong>LABEL</strong></div>
+        </header>
+
+        <section class="controls" aria-label="Configurações">
+          <label class="file-drop" for="fileInput">
+            <span class="file-title">Escolher arquivo .txt ou .zpl</span>
+            <span id="fileName">Nenhum arquivo selecionado</span>
+            <input id="fileInput" type="file" accept=".txt,.zpl,text/plain">
+          </label>
+
+          <div class="field-grid">
+            <label>
+              Etiquetas por lote
+              <input id="batchSize" type="number" min="1" max="100" value="10">
+            </label>
+            <label>
+              Tamanho
+              <select id="labelSize">
+                <option value="4x6">100 x 150 mm / 4x6</option>
+                <option value="4x4">100 x 100 mm / 4x4</option>
+                <option value="3x5">76 x 127 mm / 3x5</option>
+              </select>
+            </label>
+            <label>
+              Densidade
+              <select id="density">
+                <option value="8dpmm">203 dpi / 8 dpmm</option>
+                <option value="12dpmm">300 dpi / 12 dpmm</option>
+              </select>
+            </label>
+            <label>
+              Nome da impressora
+              <input id="printerName" type="text" value="LABEL">
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="analyzeBtn" type="button">Analisar arquivo</button>
+            <button id="downloadFullPdfBtn" type="button" disabled>Gerar PDF em Downloads</button>
+            <button id="printAllBtn" class="warning" type="button" disabled>Imprimir direto ZPL</button>
+            <button id="downloadAllBtn" type="button" disabled>Baixar todos os lotes ZPL</button>
+          </div>
+        </section>
+
+        <section class="summary" id="summary" hidden>
+          <div>
+            <span class="stat-label">Total</span>
+            <strong id="totalLabels">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Lotes</span>
+            <strong id="totalBatches">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Blocos ZPL</span>
+            <strong id="rawBlocks">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Recomendação</span>
+            <strong id="recommendation">10 por vez</strong>
+          </div>
+        </section>
+
+        <section class="result-panel" id="resultPanel" hidden>
+          <div>
+            <strong>PDF pronto</strong>
+            <p id="resultText">Arquivo gerado no formato 100 x 150 mm.</p>
+          </div>
+          <a id="resultLink" href="#" download>Baixar novamente</a>
+          <button id="openDownloadsBtn" type="button">Abrir Downloads</button>
+        </section>
+
+        <section class="table-section" aria-label="Lotes gerados">
+          <table>
+            <thead>
+              <tr>
+                <th>Lote</th>
+                <th>Etiquetas</th>
+                <th>Tamanho</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="batchRows">
+              <tr class="empty-row">
+                <td colspan="4">Escolha o arquivo para gerar os lotes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <aside class="side">
+        <h2>Como usar</h2>
+        <ol>
+          <li>Escolha o arquivo ZPL/TXT.</li>
+          <li>Use 10 etiquetas por lote para começar.</li>
+          <li>Baixe o PDF do lote e imprima em 100 x 150 mm.</li>
+          <li>Teste impressão direta só com 1 lote pequeno.</li>
+        </ol>
+
+        <div class="notice">
+          <strong>Para sua POS-9200-L</strong>
+          <p>Use o PDF completo para volume. A impressão direta continua disponível só para teste pequeno.</p>
+        </div>
+      </aside>
+    </main>
+
+    <dialog id="statusDialog">
+      <div id="statusText">Processando...</div>
+      <button id="closeDialog" type="button">Fechar</button>
+    </dialog>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
