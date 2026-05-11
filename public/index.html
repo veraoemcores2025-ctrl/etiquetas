@@ -43,12 +43,27 @@
                 <option value="12dpmm">300 dpi / 12 dpmm</option>
               </select>
             </label>
+            <label>
+              Impressora QZ
+              <input id="printerName" type="text" value="LABEL">
+            </label>
           </div>
 
           <div class="actions">
             <button id="analyzeBtn" type="button">Analisar arquivo</button>
             <button id="downloadFullPdfBtn" type="button" disabled>Gerar PDF em Downloads</button>
             <button id="downloadAllBtn" type="button" disabled>Baixar todos os lotes ZPL</button>
+          </div>
+        </section>
+
+        <section class="qz-panel">
+          <div>
+            <strong>Impressao direta com QZ Tray</strong>
+            <p id="qzStatus">Instale e abra o QZ Tray no notebook para imprimir direto na LABEL.</p>
+          </div>
+          <div class="qz-actions">
+            <button id="connectQzBtn" type="button">Conectar QZ</button>
+            <button id="printQzBtn" class="warning" type="button" disabled>Imprimir ZPL direto</button>
           </div>
         </section>
 
@@ -110,7 +125,7 @@
 
         <div class="notice">
           <strong>Para sua POS-9200-L</strong>
-          <p>Na Vercel, gere o PDF 4x6 e imprima pelo navegador usando a impressora LABEL.</p>
+          <p>Para impressao direta na Vercel, instale o QZ Tray no notebook e conecte pela plataforma.</p>
         </div>
       </aside>
     </main>
@@ -120,6 +135,7 @@
       <button id="closeDialog" type="button">Fechar</button>
     </dialog>
 
+    <script src="/qz-tray.js"></script>
     <script src="/assets/app.js"></script>
   </body>
 </html>

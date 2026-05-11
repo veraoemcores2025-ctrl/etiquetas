@@ -203,6 +203,28 @@ button.warning {
   border-bottom: 1px solid #b8dccd;
 }
 
+.qz-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fbfc;
+}
+
+.qz-panel p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.qz-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .result-panel p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -330,6 +352,11 @@ dialog::backdrop {
   .field-grid,
   .summary {
     grid-template-columns: 1fr;
+  }
+
+  .qz-panel {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .summary div {

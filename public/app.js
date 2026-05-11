@@ -10,9 +10,13 @@ const fileName = document.querySelector("#fileName");
 const batchSize = document.querySelector("#batchSize");
 const labelSize = document.querySelector("#labelSize");
 const density = document.querySelector("#density");
+const printerName = document.querySelector("#printerName");
 const analyzeBtn = document.querySelector("#analyzeBtn");
 const downloadFullPdfBtn = document.querySelector("#downloadFullPdfBtn");
 const downloadAllBtn = document.querySelector("#downloadAllBtn");
+const connectQzBtn = document.querySelector("#connectQzBtn");
+const printQzBtn = document.querySelector("#printQzBtn");
+const qzStatus = document.querySelector("#qzStatus");
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
 const totalBatches = document.querySelector("#totalBatches");
@@ -105,6 +109,76 @@ function setupEnvironment() {
   }
 }
 
+function setupQzSecurity() {
+  if (!window.qz) return;
+
+  qz.security.setCertificatePromise((resolve) => {
+    resolve("");
+  });
+
+  qz.security.setSignaturePromise(() => {
+    return (resolve) => resolve("");
+  });
+}
+
+function setQzStatus(message) {
+  qzStatus.textContent = message;
+}
+
+async function connectQz() {
+  if (!window.qz) {
+    showStatus("Biblioteca QZ Tray nao carregou. Recarregue a pagina.");
+    return;
+  }
+
+  try {
+    setupQzSecurity();
+
+    if (!qz.websocket.isActive()) {
+      setQzStatus("Conectando ao QZ Tray...");
+      await qz.websocket.connect({ retries: 2, delay: 1 });
+    }
+
+    const printer = printerName.value || "LABEL";
+    await qz.printers.find(printer);
+    setQzStatus(`QZ conectado. Impressora encontrada: ${printer}`);
+    printQzBtn.disabled = !state.zpl;
+  } catch (error) {
+    printQzBtn.disabled = true;
+    setQzStatus("QZ nao conectado. Instale/abra o QZ Tray e aceite a permissao.");
+    showStatus(error.message || "Nao consegui conectar ao QZ Tray.");
+  }
+}
+
+async function printWithQz() {
+  if (!state.zpl) {
+    showStatus("Escolha um arquivo ZPL/TXT primeiro.");
+    return;
+  }
+
+  try {
+    await connectQz();
+    const printer = printerName.value || "LABEL";
+    const config = qz.configs.create(printer, {
+      encoding: "UTF-8",
+      copies: 1
+    });
+
+    setQzStatus(`Enviando ZPL para ${printer}...`);
+    await qz.print(config, [{
+      type: "raw",
+      format: "plain",
+      data: state.zpl
+    }]);
+
+    setQzStatus(`ZPL enviado para ${printer}.`);
+    showStatus("Arquivo enviado para a impressora pelo QZ Tray.");
+  } catch (error) {
+    setQzStatus("Falha ao imprimir pelo QZ Tray. Use o PDF 4x6 como fallback.");
+    showStatus(error.message || "Nao consegui imprimir pelo QZ Tray.");
+  }
+}
+
 function analyzeZplLocally(zpl, requestedBatchSize) {
   const maxLabels = 200;
   const batch = Math.max(1, Math.min(100, requestedBatchSize));
@@ -147,11 +221,13 @@ function renderBatches() {
     batchRows.innerHTML = '<tr class="empty-row"><td colspan="4">Escolha o arquivo para gerar os lotes.</td></tr>';
     downloadAllBtn.disabled = true;
     downloadFullPdfBtn.disabled = !hasFile;
+    printQzBtn.disabled = true;
     return;
   }
 
   downloadAllBtn.disabled = false;
   downloadFullPdfBtn.disabled = false;
+  printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
   batchRows.innerHTML = state.batches.map(batch => `
     <tr>
       <td><strong>${batch.index}</strong></td>
@@ -254,12 +330,15 @@ fileInput.addEventListener("change", async () => {
   resultPanel.hidden = true;
   renderBatches();
   analyze();
+  printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
 });
 
 setupEnvironment();
 analyzeBtn.addEventListener("click", analyze);
 downloadFullPdfBtn.addEventListener("click", downloadFullPdf);
 downloadAllBtn.addEventListener("click", downloadAllZpl);
+connectQzBtn.addEventListener("click", connectQz);
+printQzBtn.addEventListener("click", printWithQz);
 closeDialog.addEventListener("click", closeStatus);
 openDownloadsBtn.addEventListener("click", openDownloads);
 batchSize.addEventListener("change", () => {
