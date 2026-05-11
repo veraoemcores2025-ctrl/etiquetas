@@ -18,6 +18,12 @@ const connectQzBtn = document.querySelector("#connectQzBtn");
 const printQzBtn = document.querySelector("#printQzBtn");
 const printPdfQzBtn = document.querySelector("#printPdfQzBtn");
 const qzStatus = document.querySelector("#qzStatus");
+const wbuyStatus = document.querySelector("#wbuyStatus");
+const wbuyOrderId = document.querySelector("#wbuyOrderId");
+const testWbuyBtn = document.querySelector("#testWbuyBtn");
+const fetchWbuyOrderBtn = document.querySelector("#fetchWbuyOrderBtn");
+const wbuyResultPanel = document.querySelector("#wbuyResultPanel");
+const wbuyResultText = document.querySelector("#wbuyResultText");
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
 const totalBatches = document.querySelector("#totalBatches");
@@ -375,6 +381,57 @@ async function openDownloads() {
   }
 }
 
+function setWbuyStatus(message) {
+  wbuyStatus.textContent = message;
+}
+
+async function testWbuyApi() {
+  setWbuyStatus("Testando credenciais wBuy...");
+
+  try {
+    const response = await fetch("/api/wbuy-store");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Falha ao testar API wBuy.");
+    }
+
+    setWbuyStatus("API wBuy conectada com sucesso.");
+    wbuyResultPanel.hidden = false;
+    wbuyResultText.textContent = "Conexao OK. Agora busque um pedido.";
+  } catch (error) {
+    setWbuyStatus(error.message);
+    showStatus(error.message);
+  }
+}
+
+async function fetchWbuyOrder() {
+  const id = wbuyOrderId.value.trim();
+
+  if (!id) {
+    showStatus("Informe o numero do pedido wBuy.");
+    return;
+  }
+
+  setWbuyStatus(`Buscando pedido ${id} na wBuy...`);
+
+  try {
+    const response = await fetch(`/api/wbuy-order?id=${encodeURIComponent(id)}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Pedido nao encontrado.");
+    }
+
+    setWbuyStatus(`Pedido encontrado pela rota ${data.path}.`);
+    wbuyResultPanel.hidden = false;
+    wbuyResultText.textContent = JSON.stringify(data.data, null, 2).slice(0, 1200);
+  } catch (error) {
+    setWbuyStatus(error.message);
+    showStatus(error.message);
+  }
+}
+
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   if (!file) return;
@@ -399,6 +456,8 @@ printQzBtn.addEventListener("click", printWithQz);
 printPdfQzBtn.addEventListener("click", printPdfWithQz);
 closeDialog.addEventListener("click", closeStatus);
 openDownloadsBtn.addEventListener("click", openDownloads);
+testWbuyBtn.addEventListener("click", testWbuyApi);
+fetchWbuyOrderBtn.addEventListener("click", fetchWbuyOrder);
 batchSize.addEventListener("change", () => {
   if (state.zpl) analyze();
 });

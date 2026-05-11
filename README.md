@@ -32,3 +32,15 @@ Na Vercel, a plataforma funciona em modo web:
 - Gera o PDF completo 4x6 para download no navegador.
 - Esconde impressão direta ZPL, porque a Vercel não acessa impressoras locais.
 - Não salva em `Downloads` diretamente, porque isso só é possível no modo local.
+
+### Variáveis da wBuy
+
+Para usar a integração wBuy, configure no painel da Vercel:
+
+```text
+WBUY_API_USER=usuario_api
+WBUY_API_PASSWORD=senha_api
+WBUY_USER_AGENT=Etiquetas ZPL (seu-email@dominio.com)
+```
+
+Nunca coloque a senha da API no navegador ou em arquivos do projeto.

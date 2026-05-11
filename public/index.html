@@ -68,6 +68,25 @@
           </div>
         </section>
 
+        <section class="qz-panel">
+          <div>
+            <strong>Integração wBuy</strong>
+            <p id="wbuyStatus">Configure as variáveis na Vercel para buscar pedidos sem expor a chave no navegador.</p>
+          </div>
+          <div class="qz-actions">
+            <input id="wbuyOrderId" type="text" placeholder="Pedido wBuy, ex: 12357525">
+            <button id="testWbuyBtn" type="button">Testar API</button>
+            <button id="fetchWbuyOrderBtn" type="button">Buscar pedido</button>
+          </div>
+        </section>
+
+        <section class="result-panel" id="wbuyResultPanel" hidden>
+          <div>
+            <strong>Pedido wBuy</strong>
+            <p id="wbuyResultText">Dados recebidos da API.</p>
+          </div>
+        </section>
+
         <section class="summary" id="summary" hidden>
           <div>
             <span class="stat-label">Total</span>

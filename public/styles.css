@@ -133,6 +133,10 @@ select {
   color: var(--text);
 }
 
+.qz-actions input {
+  min-width: 260px;
+}
+
 .actions {
   display: flex;
   gap: 10px;
