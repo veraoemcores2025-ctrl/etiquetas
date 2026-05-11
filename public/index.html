@@ -14,7 +14,6 @@
             <h1>Etiquetas ZPL em lotes</h1>
             <p>Suba até 200 etiquetas da Shopee, wBuy ou transportadora e baixe um PDF 4x6 pronto para imprimir.</p>
           </div>
-          <div class="printer-pill" id="printerPill">Impressora padrão: <strong>LABEL</strong></div>
         </header>
 
         <section class="controls" aria-label="Configurações">
@@ -44,16 +43,11 @@
                 <option value="12dpmm">300 dpi / 12 dpmm</option>
               </select>
             </label>
-            <label id="printerField">
-              Nome da impressora
-              <input id="printerName" type="text" value="LABEL">
-            </label>
           </div>
 
           <div class="actions">
             <button id="analyzeBtn" type="button">Analisar arquivo</button>
             <button id="downloadFullPdfBtn" type="button" disabled>Gerar PDF em Downloads</button>
-            <button id="printAllBtn" class="warning" type="button" disabled hidden>Imprimir direto ZPL</button>
             <button id="downloadAllBtn" type="button" disabled>Baixar todos os lotes ZPL</button>
           </div>
         </section>
@@ -110,13 +104,13 @@
         <ol>
           <li>Escolha o arquivo ZPL/TXT.</li>
           <li>Use 10 etiquetas por lote para começar.</li>
-          <li>Baixe o PDF do lote e imprima em 100 x 150 mm.</li>
-          <li>Teste impressão direta só com 1 lote pequeno.</li>
+          <li>Baixe o PDF completo ou por lote.</li>
+          <li>Abra o PDF e imprima em 100 x 150 mm.</li>
         </ol>
 
         <div class="notice">
           <strong>Para sua POS-9200-L</strong>
-          <p>Use o PDF completo para volume. A impressão direta continua disponível só para teste pequeno.</p>
+          <p>Na Vercel, gere o PDF 4x6 e imprima pelo navegador usando a impressora LABEL.</p>
         </div>
       </aside>
     </main>
