@@ -14,7 +14,7 @@
             <h1>Etiquetas ZPL em lotes</h1>
             <p>Suba até 200 etiquetas da Shopee, wBuy ou transportadora e baixe um PDF 4x6 pronto para imprimir.</p>
           </div>
-          <div class="printer-pill">Impressora padrão: <strong>LABEL</strong></div>
+          <div class="printer-pill" id="printerPill">Impressora padrão: <strong>LABEL</strong></div>
         </header>
 
         <section class="controls" aria-label="Configurações">
@@ -44,7 +44,7 @@
                 <option value="12dpmm">300 dpi / 12 dpmm</option>
               </select>
             </label>
-            <label>
+            <label id="printerField">
               Nome da impressora
               <input id="printerName" type="text" value="LABEL">
             </label>
@@ -53,7 +53,7 @@
           <div class="actions">
             <button id="analyzeBtn" type="button">Analisar arquivo</button>
             <button id="downloadFullPdfBtn" type="button" disabled>Gerar PDF em Downloads</button>
-            <button id="printAllBtn" class="warning" type="button" disabled>Imprimir direto ZPL</button>
+            <button id="printAllBtn" class="warning" type="button" disabled hidden>Imprimir direto ZPL</button>
             <button id="downloadAllBtn" type="button" disabled>Baixar todos os lotes ZPL</button>
           </div>
         </section>
@@ -83,7 +83,7 @@
             <p id="resultText">Arquivo gerado no formato 100 x 150 mm.</p>
           </div>
           <a id="resultLink" href="#" download>Baixar novamente</a>
-          <button id="openDownloadsBtn" type="button">Abrir Downloads</button>
+          <button id="openDownloadsBtn" type="button" hidden>Abrir Downloads</button>
         </section>
 
         <section class="table-section" aria-label="Lotes gerados">

@@ -308,6 +308,11 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname === "/api/print") {
+      if (process.platform !== "win32") {
+        send(res, 400, JSON.stringify({ error: "Impressao direta so funciona no modo local Windows. Na Vercel, baixe o PDF e imprima pelo navegador." }), { "Content-Type": mimeTypes[".json"] });
+        return;
+      }
+
       const body = await readBody(req);
       const payload = JSON.parse(body.toString("utf8"));
       const batchSize = Math.max(1, Math.min(100, Number(payload.batchSize) || 1));
@@ -328,6 +333,11 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname === "/api/print-all") {
+      if (process.platform !== "win32") {
+        send(res, 400, JSON.stringify({ error: "Impressao direta so funciona no modo local Windows. Na Vercel, baixe o PDF e imprima pelo navegador." }), { "Content-Type": mimeTypes[".json"] });
+        return;
+      }
+
       const body = await readBody(req);
       const payload = JSON.parse(body.toString("utf8"));
       const printer = payload.printer || "LABEL";

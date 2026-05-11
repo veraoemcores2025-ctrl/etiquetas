@@ -30,6 +30,8 @@ const resultText = document.querySelector("#resultText");
 const resultLink = document.querySelector("#resultLink");
 const openDownloadsBtn = document.querySelector("#openDownloadsBtn");
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const printerPill = document.querySelector("#printerPill");
+const printerField = document.querySelector("#printerField");
 
 function showStatus(message) {
   statusText.textContent = message;
@@ -103,9 +105,14 @@ function setupEnvironment() {
   if (!isLocalhost) {
     downloadFullPdfBtn.textContent = "Baixar PDF completo 4x6";
     printAllBtn.hidden = true;
-    printerName.closest("label").hidden = true;
+    printerPill.hidden = true;
+    printerField.hidden = true;
     openDownloadsBtn.hidden = true;
+    return;
   }
+
+  printAllBtn.hidden = false;
+  openDownloadsBtn.hidden = false;
 }
 
 function renderBatches() {
@@ -121,7 +128,7 @@ function renderBatches() {
 
   downloadAllBtn.disabled = false;
   downloadFullPdfBtn.disabled = false;
-  printAllBtn.disabled = false;
+  printAllBtn.disabled = !isLocalhost;
   batchRows.innerHTML = state.batches.map(batch => `
     <tr>
       <td><strong>${batch.index}</strong></td>
@@ -131,7 +138,7 @@ function renderBatches() {
         <div class="row-actions">
           <button class="secondary" data-action="zpl" data-index="${batch.index}" type="button">Baixar ZPL</button>
           <button data-action="pdf" data-index="${batch.index}" type="button">Baixar PDF</button>
-          <button class="warning" data-action="print" data-index="${batch.index}" type="button">Imprimir direto</button>
+          ${isLocalhost ? `<button class="warning" data-action="print" data-index="${batch.index}" type="button">Imprimir direto</button>` : ""}
         </div>
       </td>
     </tr>
