@@ -16,6 +16,7 @@ const downloadFullPdfBtn = document.querySelector("#downloadFullPdfBtn");
 const downloadAllBtn = document.querySelector("#downloadAllBtn");
 const connectQzBtn = document.querySelector("#connectQzBtn");
 const printQzBtn = document.querySelector("#printQzBtn");
+const printPdfQzBtn = document.querySelector("#printPdfQzBtn");
 const qzStatus = document.querySelector("#qzStatus");
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
@@ -143,8 +144,10 @@ async function connectQz() {
     await qz.printers.find(printer);
     setQzStatus(`QZ conectado. Impressora encontrada: ${printer}`);
     printQzBtn.disabled = !state.zpl;
+    printPdfQzBtn.disabled = !state.zpl;
   } catch (error) {
     printQzBtn.disabled = true;
+    printPdfQzBtn.disabled = true;
     setQzStatus("QZ nao conectado. Instale/abra o QZ Tray e aceite a permissao.");
     showStatus(error.message || "Nao consegui conectar ao QZ Tray.");
   }
@@ -176,6 +179,57 @@ async function printWithQz() {
   } catch (error) {
     setQzStatus("Falha ao imprimir pelo QZ Tray. Use o PDF 4x6 como fallback.");
     showStatus(error.message || "Nao consegui imprimir pelo QZ Tray.");
+  }
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+async function printPdfWithQz() {
+  if (!state.zpl) {
+    showStatus("Escolha um arquivo ZPL/TXT primeiro.");
+    return;
+  }
+
+  try {
+    await connectQz();
+    const printer = printerName.value || "LABEL";
+    setQzStatus("Gerando PDF 4x6 para enviar ao QZ...");
+
+    const endpoint = isLocalhost ? "/api/pdf-all" : "/api/pdf-all";
+    const response = await postJson(endpoint, payload(), 180000);
+    const pdfBuffer = await response.arrayBuffer();
+    const pdfBase64 = arrayBufferToBase64(pdfBuffer);
+
+    const config = qz.configs.create(printer, {
+      copies: 1,
+      units: "mm",
+      size: { width: 100, height: 150 },
+      margins: 0
+    });
+
+    setQzStatus(`Enviando PDF para ${printer}...`);
+    await qz.print(config, [{
+      type: "pixel",
+      format: "pdf",
+      flavor: "base64",
+      data: pdfBase64
+    }]);
+
+    setQzStatus(`PDF enviado para ${printer}.`);
+    showStatus("PDF enviado para a impressora pelo QZ Tray.");
+  } catch (error) {
+    setQzStatus("Falha ao imprimir PDF pelo QZ. Use Baixar PDF completo 4x6.");
+    showStatus(error.message || "Nao consegui imprimir o PDF pelo QZ Tray.");
   }
 }
 
@@ -222,12 +276,14 @@ function renderBatches() {
     downloadAllBtn.disabled = true;
     downloadFullPdfBtn.disabled = !hasFile;
     printQzBtn.disabled = true;
+    printPdfQzBtn.disabled = true;
     return;
   }
 
   downloadAllBtn.disabled = false;
   downloadFullPdfBtn.disabled = false;
   printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+  printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
   batchRows.innerHTML = state.batches.map(batch => `
     <tr>
       <td><strong>${batch.index}</strong></td>
@@ -331,6 +387,7 @@ fileInput.addEventListener("change", async () => {
   renderBatches();
   analyze();
   printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+  printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
 });
 
 setupEnvironment();
@@ -339,6 +396,7 @@ downloadFullPdfBtn.addEventListener("click", downloadFullPdf);
 downloadAllBtn.addEventListener("click", downloadAllZpl);
 connectQzBtn.addEventListener("click", connectQz);
 printQzBtn.addEventListener("click", printWithQz);
+printPdfQzBtn.addEventListener("click", printPdfWithQz);
 closeDialog.addEventListener("click", closeStatus);
 openDownloadsBtn.addEventListener("click", openDownloads);
 batchSize.addEventListener("change", () => {
