@@ -29,6 +29,7 @@ const resultPanel = document.querySelector("#resultPanel");
 const resultText = document.querySelector("#resultText");
 const resultLink = document.querySelector("#resultLink");
 const openDownloadsBtn = document.querySelector("#openDownloadsBtn");
+const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 function showStatus(message) {
   statusText.textContent = message;
@@ -96,6 +97,15 @@ function payload(extra = {}) {
     printer: printerName.value || "LABEL",
     ...extra
   };
+}
+
+function setupEnvironment() {
+  if (!isLocalhost) {
+    downloadFullPdfBtn.textContent = "Baixar PDF completo 4x6";
+    printAllBtn.hidden = true;
+    printerName.closest("label").hidden = true;
+    openDownloadsBtn.hidden = true;
+  }
 }
 
 function renderBatches() {
@@ -187,7 +197,7 @@ function analyzeZplLocally(zpl, requestedBatchSize) {
 }
 
 async function downloadBatch(index, type) {
-  const endpoint = type === "pdf" ? "/api/pdf" : "/api/batch";
+  const endpoint = type === "pdf" ? (isLocalhost ? "/api/pdf" : "/api/pdf-batch") : "/api/batch";
   showStatus(type === "pdf" ? "Gerando PDF do lote..." : "Gerando arquivo ZPL do lote...");
   try {
     const response = await postJson(endpoint, payload({ batchIndex: index }));
@@ -229,12 +239,22 @@ async function downloadAllZpl() {
 async function downloadFullPdf() {
   if (!state.zpl) return;
 
-  showStatus("Gerando PDF e salvando na pasta Downloads...");
+  showStatus(isLocalhost ? "Gerando PDF e salvando na pasta Downloads..." : "Gerando PDF para download...");
   try {
-    const response = await postJson("/api/pdf-all-save", payload());
-    const data = await response.json();
-    showPdfResult(data.url, data.filename, data.total, data.localPath);
-    showStatus(`PDF salvo em Downloads: ${data.filename}`);
+    if (isLocalhost) {
+      const response = await postJson("/api/pdf-all-save", payload());
+      const data = await response.json();
+      showPdfResult(data.url, data.filename, data.total, data.localPath);
+      showStatus(`PDF salvo em Downloads: ${data.filename}`);
+      return;
+    }
+
+    const response = await postJson("/api/pdf-all", payload());
+    const blob = await response.blob();
+    const filename = "etiquetas_completo_4x6.pdf";
+    const url = downloadBlob(blob, filename, true);
+    showPdfResult(url, filename, state.total);
+    showStatus("PDF pronto. Se o download nao iniciou, clique em Baixar novamente na faixa verde.");
   } catch (error) {
     const message = error.name === "AbortError" ? "A geração demorou demais. Tente baixar por lotes menores." : error.message;
     showStatus(`${message} Se isso acontecer, use os botões Baixar PDF por lote.`);
@@ -286,6 +306,7 @@ fileInput.addEventListener("change", async () => {
   analyze();
 });
 
+setupEnvironment();
 analyzeBtn.addEventListener("click", analyze);
 downloadFullPdfBtn.addEventListener("click", downloadFullPdf);
 printAllBtn.addEventListener("click", printAll);

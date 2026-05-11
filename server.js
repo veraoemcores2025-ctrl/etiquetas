@@ -4,11 +4,17 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { PDFDocument } from "pdf-lib";
+import {
+  buildBatches,
+  createCompletePdf,
+  enforceLabelLimit,
+  extractZplLabels,
+  maxLabelsPerFile,
+  zplToPdf
+} from "./lib/zpl.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const port = process.env.PORT || 3210;
-const maxLabelsPerFile = 200;
 const generatedDir = join(__dirname, "generated");
 const downloadsDir = join(process.env.USERPROFILE || __dirname, "Downloads");
 
@@ -38,78 +44,6 @@ async function readBody(req, limitBytes = 25 * 1024 * 1024) {
   }
 
   return Buffer.concat(chunks);
-}
-
-function extractZplLabels(zpl) {
-  if (Array.isArray(zpl)) zpl = zpl.join("\n");
-  zpl = String(zpl || "");
-
-  const allBlocks = [...zpl.matchAll(/\^XA[\s\S]*?\^XZ/g)].map(match => match[0]);
-  const graphicJobs = zpl.match(/~DGR[\s\S]*?(?=\r?\n~DGR|$)/g) || [];
-
-  if (graphicJobs.length) {
-    return { labels: graphicJobs, setup: "", rawBlocks: allBlocks.length };
-  }
-
-  const labels = [];
-
-  for (const block of allBlocks) {
-    if (!/\^ID/.test(block)) labels.push(block);
-  }
-
-  return { labels, setup: "", rawBlocks: allBlocks.length };
-}
-
-function buildBatches(labels, setup, batchSize) {
-  const batches = [];
-
-  for (let index = 0; index < labels.length; index += batchSize) {
-    const chunk = labels.slice(index, index + batchSize);
-    batches.push({
-      index: batches.length + 1,
-      start: index + 1,
-      end: index + chunk.length,
-      count: chunk.length,
-      zpl: `${setup}${chunk.join("\n")}`
-    });
-  }
-
-  return batches;
-}
-
-function enforceLabelLimit(labels) {
-  if (labels.length > maxLabelsPerFile) {
-    const error = new Error(`Este arquivo tem ${labels.length} etiquetas. No inicio, a plataforma aceita ate ${maxLabelsPerFile} por arquivo.`);
-    error.statusCode = 400;
-    throw error;
-  }
-}
-
-async function zplToPdf(zpl, density, size) {
-  const response = await fetch(`https://api.labelary.com/v1/printers/${density}/labels/${size}/`, {
-    method: "POST",
-    headers: { Accept: "application/pdf", "Content-Type": "application/x-www-form-urlencoded" },
-    body: zpl
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "A conversao para PDF falhou.");
-  }
-
-  return Buffer.from(await response.arrayBuffer());
-}
-
-async function mergePdfs(pdfBuffers) {
-  const merged = await PDFDocument.create();
-
-  for (const buffer of pdfBuffers) {
-    const source = await PDFDocument.load(buffer);
-    const pages = await merged.copyPages(source, source.getPageIndices());
-    for (const page of pages) merged.addPage(page);
-  }
-
-  return Buffer.from(await merged.save());
 }
 
 function printRawWindows(printerName, zpl) {
@@ -325,14 +259,7 @@ const server = createServer(async (req, res) => {
       }
       enforceLabelLimit(labels);
 
-      const batches = buildBatches(labels, setup, 10);
-      const pdfParts = [];
-
-      for (const batch of batches) {
-        pdfParts.push(await zplToPdf(batch.zpl, density, size));
-      }
-
-      const pdf = await mergePdfs(pdfParts);
+      const { pdf } = await createCompletePdf({ zpl: payload.zpl || "", density, size });
       send(res, 200, pdf, {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="etiquetas_completo_4x6.pdf"`
@@ -355,14 +282,7 @@ const server = createServer(async (req, res) => {
       }
       enforceLabelLimit(labels);
 
-      const batches = buildBatches(labels, setup, 10);
-      const pdfParts = [];
-
-      for (const batch of batches) {
-        pdfParts.push(await zplToPdf(batch.zpl, density, size));
-      }
-
-      const pdf = await mergePdfs(pdfParts);
+      const { pdf } = await createCompletePdf({ zpl: payload.zpl || "", density, size });
       await mkdir(generatedDir, { recursive: true });
 
       const filename = `etiquetas_completo_4x6_${randomUUID().slice(0, 8)}.pdf`;
