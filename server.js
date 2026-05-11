@@ -13,6 +13,7 @@ import {
   zplToPdf
 } from "./lib/zpl.js";
 import { findWbuyOrder, wbuyRequest } from "./lib/wbuy.js";
+import { createWbuyLabelPdfByOrderId } from "./lib/wbuy-label.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const port = process.env.PORT || 3210;
@@ -260,6 +261,16 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/wbuy-order") {
       const result = await findWbuyOrder(url.searchParams.get("id"));
       send(res, 200, JSON.stringify(result), { "Content-Type": mimeTypes[".json"] });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/wbuy-label") {
+      const orderId = url.searchParams.get("id");
+      const { pdf } = await createWbuyLabelPdfByOrderId(orderId);
+      send(res, 200, pdf, {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="etiqueta_wbuy_${orderId || "pedido"}_4x6.pdf"`
+      });
       return;
     }
 

@@ -7,7 +7,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bwip-js": "^4.10.1",
     "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "qz-tray": "^2.2.6"
   }
 }

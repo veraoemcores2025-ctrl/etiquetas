@@ -22,8 +22,11 @@ const wbuyStatus = document.querySelector("#wbuyStatus");
 const wbuyOrderId = document.querySelector("#wbuyOrderId");
 const testWbuyBtn = document.querySelector("#testWbuyBtn");
 const fetchWbuyOrderBtn = document.querySelector("#fetchWbuyOrderBtn");
+const downloadWbuyLabelBtn = document.querySelector("#downloadWbuyLabelBtn");
+const printWbuyLabelBtn = document.querySelector("#printWbuyLabelBtn");
 const wbuyResultPanel = document.querySelector("#wbuyResultPanel");
 const wbuyResultText = document.querySelector("#wbuyResultText");
+let currentWbuyOrderId = "";
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
 const totalBatches = document.querySelector("#totalBatches");
@@ -200,6 +203,27 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
+async function printPdfBufferWithQz(pdfBuffer, successMessage) {
+  await connectQz();
+  const printer = printerName.value || "LABEL";
+  const pdfBase64 = arrayBufferToBase64(pdfBuffer);
+  const config = qz.configs.create(printer, {
+    copies: 1,
+    units: "mm",
+    size: { width: 100, height: 150 },
+    margins: 0
+  });
+
+  await qz.print(config, [{
+    type: "pixel",
+    format: "pdf",
+    flavor: "base64",
+    data: pdfBase64
+  }]);
+
+  setQzStatus(successMessage || `PDF enviado para ${printer}.`);
+}
+
 async function printPdfWithQz() {
   if (!state.zpl) {
     showStatus("Escolha um arquivo ZPL/TXT primeiro.");
@@ -214,24 +238,8 @@ async function printPdfWithQz() {
     const endpoint = isLocalhost ? "/api/pdf-all" : "/api/pdf-all";
     const response = await postJson(endpoint, payload(), 180000);
     const pdfBuffer = await response.arrayBuffer();
-    const pdfBase64 = arrayBufferToBase64(pdfBuffer);
-
-    const config = qz.configs.create(printer, {
-      copies: 1,
-      units: "mm",
-      size: { width: 100, height: 150 },
-      margins: 0
-    });
-
     setQzStatus(`Enviando PDF para ${printer}...`);
-    await qz.print(config, [{
-      type: "pixel",
-      format: "pdf",
-      flavor: "base64",
-      data: pdfBase64
-    }]);
-
-    setQzStatus(`PDF enviado para ${printer}.`);
+    await printPdfBufferWithQz(pdfBuffer, `PDF enviado para ${printer}.`);
     showStatus("PDF enviado para a impressora pelo QZ Tray.");
   } catch (error) {
     setQzStatus("Falha ao imprimir PDF pelo QZ. Use Baixar PDF completo 4x6.");
@@ -424,11 +432,61 @@ async function fetchWbuyOrder() {
     }
 
     setWbuyStatus(`Pedido encontrado pela rota ${data.path}.`);
+    currentWbuyOrderId = id;
+    downloadWbuyLabelBtn.disabled = false;
+    printWbuyLabelBtn.disabled = !window.qz || !qz.websocket.isActive();
     wbuyResultPanel.hidden = false;
     wbuyResultText.textContent = JSON.stringify(data.data, null, 2).slice(0, 1200);
   } catch (error) {
     setWbuyStatus(error.message);
     showStatus(error.message);
+  }
+}
+
+async function downloadWbuyLabel() {
+  if (!currentWbuyOrderId) {
+    showStatus("Busque um pedido wBuy primeiro.");
+    return;
+  }
+
+  try {
+    showStatus("Gerando etiqueta wBuy 100 x 150 mm...");
+    const response = await fetch(`/api/wbuy-label?id=${encodeURIComponent(currentWbuyOrderId)}`);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Falha ao gerar etiqueta wBuy.");
+    }
+
+    const blob = await response.blob();
+    const filename = `etiqueta_wbuy_${currentWbuyOrderId}_4x6.pdf`;
+    const url = downloadBlob(blob, filename, true);
+    showPdfResult(url, filename, 1);
+    showStatus("Etiqueta wBuy pronta. Se o download nao iniciou, clique em Baixar novamente.");
+  } catch (error) {
+    showStatus(error.message);
+  }
+}
+
+async function printWbuyLabel() {
+  if (!currentWbuyOrderId) {
+    showStatus("Busque um pedido wBuy primeiro.");
+    return;
+  }
+
+  try {
+    showStatus("Gerando e enviando etiqueta wBuy para a impressora...");
+    const response = await fetch(`/api/wbuy-label?id=${encodeURIComponent(currentWbuyOrderId)}`);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Falha ao gerar etiqueta wBuy.");
+    }
+
+    await printPdfBufferWithQz(await response.arrayBuffer(), "Etiqueta wBuy enviada para a impressora.");
+    showStatus("Etiqueta wBuy enviada para a impressora pelo QZ Tray.");
+  } catch (error) {
+    showStatus(error.message || "Nao consegui imprimir a etiqueta wBuy.");
   }
 }
 
@@ -458,6 +516,8 @@ closeDialog.addEventListener("click", closeStatus);
 openDownloadsBtn.addEventListener("click", openDownloads);
 testWbuyBtn.addEventListener("click", testWbuyApi);
 fetchWbuyOrderBtn.addEventListener("click", fetchWbuyOrder);
+downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
+printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 batchSize.addEventListener("change", () => {
   if (state.zpl) analyze();
 });
