@@ -12,6 +12,7 @@ import {
   maxLabelsPerFile,
   zplToPdf
 } from "./lib/zpl.js";
+import { findWbuyOrder, wbuyRequest } from "./lib/wbuy.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const port = process.env.PORT || 3210;
@@ -226,7 +227,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "POST" && url.pathname === "/api/pdf") {
+    if (req.method === "POST" && (url.pathname === "/api/pdf" || url.pathname === "/api/pdf-batch")) {
       const body = await readBody(req);
       const payload = JSON.parse(body.toString("utf8"));
       const batchSize = Math.max(1, Math.min(100, Number(payload.batchSize) || 10));
@@ -247,6 +248,18 @@ const server = createServer(async (req, res) => {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="etiquetas_lote_${batch.index}_${batch.start}-${batch.end}.pdf"`
       });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/wbuy-store") {
+      const data = await wbuyRequest("/store/");
+      send(res, 200, JSON.stringify({ ok: true, data }), { "Content-Type": mimeTypes[".json"] });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/wbuy-order") {
+      const result = await findWbuyOrder(url.searchParams.get("id"));
+      send(res, 200, JSON.stringify(result), { "Content-Type": mimeTypes[".json"] });
       return;
     }
 
