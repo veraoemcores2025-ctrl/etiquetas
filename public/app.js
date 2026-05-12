@@ -88,6 +88,19 @@ function downloadBlob(blob, filename, keepUrl = false) {
   return url;
 }
 
+function pdfText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function drawPdfText(page, text, options) {
+  page.drawText(pdfText(text), options);
+}
+
 async function postJson(url, payload, timeoutMs = 120000) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -329,6 +342,7 @@ function wrapPdfText(text, maxChars) {
 }
 
 async function downloadSeparationPdf() {
+  try {
   const { rows } = buildShopeeSeparationRows();
   if (!rows.length) {
     showStatus("Suba a planilha da Shopee primeiro.");
@@ -349,8 +363,8 @@ async function downloadSeparationPdf() {
   let y = pageSize[1] - margin;
 
   const drawHeader = () => {
-    page.drawText("Mapa de separacao Shopee", { x: margin, y, size: 18, font: bold, color: rgb(0.05, 0.12, 0.16) });
-    page.drawText(`Pedidos: ${state.shopeeOrders.length}   Gerado pela plataforma Verão em cores`, { x: margin, y: y - 18, size: 9, font, color: rgb(0.35, 0.42, 0.48) });
+    drawPdfText(page, "Mapa de separacao Shopee", { x: margin, y, size: 18, font: bold, color: rgb(0.05, 0.12, 0.16) });
+    drawPdfText(page, `Pedidos: ${state.shopeeOrders.length}   Gerado pela plataforma Verao em cores`, { x: margin, y: y - 18, size: 9, font, color: rgb(0.35, 0.42, 0.48) });
     y -= 40;
   };
 
@@ -367,35 +381,35 @@ async function downloadSeparationPdf() {
     const protectedName = isProtectedName(order.recipient);
     const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username;
     const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
-    const itemHeight = order.items.reduce((sum, item) => sum + 30 + (wrapPdfText(item.product, 48).length - 1) * 10, 0);
+    const itemHeight = order.items.reduce((sum, item) => sum + 30 + (wrapPdfText(pdfText(item.product), 48).length - 1) * 10, 0);
     newPageIfNeeded(78 + itemHeight);
 
     page.drawRectangle({ x: margin, y: y - 24, width: pageSize[0] - margin * 2, height: 24, color: rgb(0.93, 0.97, 0.98) });
-    page.drawText(`#${index + 1}`, { x: margin + 8, y: y - 16, size: 10, font: bold });
-    page.drawText(`Etiqueta: ${labelNumber || "-"}`, { x: margin + 44, y: y - 16, size: 10, font: bold });
-    page.drawText(`Pedido: ${order.orderId}`, { x: margin + 136, y: y - 16, size: 10, font: bold });
-    page.drawText(`Rastreio: ${order.tracking || "-"}`.slice(0, 38), { x: margin + 306, y: y - 16, size: 9, font });
+    drawPdfText(page, `#${index + 1}`, { x: margin + 8, y: y - 16, size: 10, font: bold });
+    drawPdfText(page, `Etiqueta: ${labelNumber || "-"}`, { x: margin + 44, y: y - 16, size: 10, font: bold });
+    drawPdfText(page, `Pedido: ${order.orderId}`, { x: margin + 136, y: y - 16, size: 10, font: bold });
+    drawPdfText(page, `Rastreio: ${order.tracking || "-"}`.slice(0, 38), { x: margin + 306, y: y - 16, size: 9, font });
     y -= 38;
 
-    page.drawText(`Cliente: ${displayName}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
+    drawPdfText(page, `Cliente: ${displayName}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
     y -= 14;
-    page.drawText(`${protectedName && !order.labelRecipient ? "Nome protegido pela Shopee   " : ""}Usuario: ${order.username || "-"}   Envio: ${order.shipping || "-"}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
+    drawPdfText(page, `${protectedName && !order.labelRecipient ? "Nome protegido pela Shopee   " : ""}Usuario: ${order.username || "-"}   Envio: ${order.shipping || "-"}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
     y -= 12;
-    page.drawText(`Endereco: ${addressLine}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
+    drawPdfText(page, `Endereco: ${addressLine}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
     y -= 18;
 
     order.items.forEach(item => {
       const variation = splitVariation(item.variation);
-      const productLines = wrapPdfText(item.product, 58).slice(0, 3);
+      const productLines = wrapPdfText(pdfText(item.product), 58).slice(0, 3);
       newPageIfNeeded(34 + productLines.length * 10);
-      page.drawText(`${item.qty}x`, { x: margin, y, size: 13, font: bold, color: rgb(0.05, 0.45, 0.5) });
-      page.drawText(productLines[0] || "-", { x: margin + 36, y, size: 10, font: bold });
+      drawPdfText(page, `${item.qty}x`, { x: margin, y, size: 13, font: bold, color: rgb(0.05, 0.45, 0.5) });
+      drawPdfText(page, productLines[0] || "-", { x: margin + 36, y, size: 10, font: bold });
       y -= 12;
       productLines.slice(1).forEach(line => {
-        page.drawText(line, { x: margin + 36, y, size: 9, font });
+        drawPdfText(page, line, { x: margin + 36, y, size: 9, font });
         y -= 10;
       });
-      page.drawText(`Cor: ${variation.color}   ${variation.size ? `Tamanho: ${variation.size}` : ""}`, { x: margin + 36, y, size: 9, font, color: rgb(0.05, 0.35, 0.4) });
+      drawPdfText(page, `Cor: ${variation.color}   ${variation.size ? `Tamanho: ${variation.size}` : ""}`, { x: margin + 36, y, size: 9, font, color: rgb(0.05, 0.35, 0.4) });
       y -= 18;
     });
 
@@ -403,7 +417,13 @@ async function downloadSeparationPdf() {
   });
 
   const bytes = await pdf.save();
-  downloadBlob(new Blob([bytes], { type: "application/pdf" }), "mapa_separacao_shopee.pdf");
+  const url = downloadBlob(new Blob([bytes], { type: "application/pdf" }), "mapa_separacao_shopee.pdf", true);
+  showPdfResult(url, "mapa_separacao_shopee.pdf", rows.length);
+  resultText.textContent = `${rows.length} pedidos no mapa de separacao.`;
+  showStatus("PDF de separacao pronto. Se o download nao iniciou, clique em Baixar novamente.");
+  } catch (error) {
+    showStatus(error.message || "Nao consegui gerar o PDF de separacao.");
+  }
 }
 
 function showPdfResult(url, filename, total, localPath) {
