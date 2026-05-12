@@ -544,11 +544,15 @@ async function printWbuyLabel() {
 }
 
 fileInput.addEventListener("change", async () => {
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = Array.from(fileInput.files || []);
+  if (!files.length) return;
 
-  state.zpl = await file.text();
-  fileName.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+  const parts = await Promise.all(files.map(file => file.text()));
+  state.zpl = parts.join("\n");
+  const totalKb = Math.ceil(files.reduce((sum, file) => sum + file.size, 0) / 1024);
+  fileName.textContent = files.length === 1
+    ? `${files[0].name} (${totalKb} KB)`
+    : `${files.length} arquivos combinados (${totalKb} KB)`;
   state.batches = [];
   summary.hidden = true;
   resultPanel.hidden = true;
