@@ -277,7 +277,10 @@ function createOrdersFromZplRefs(labelRefs) {
   const seen = new Set();
 
   labelRefs.forEach((ref, index) => {
-    const code = ref.orderId || ref.tracking || `ZPL-${index + 1}`;
+    const hasReadableData = Boolean(ref.orderId || ref.tracking || ref.recipient);
+    if (!hasReadableData) return;
+
+    const code = ref.orderId || ref.tracking || ref.recipient;
     const key = normalizeCode(code);
     if (seen.has(key)) return;
     seen.add(key);
@@ -640,7 +643,13 @@ function renderShopeeSeparation() {
   updateScanCounters();
 
   if (!rows.length) {
-    shopeeRows.innerHTML = '<div class="empty-separation">Suba a planilha da Shopee ou um ZPL para montar o mapa de separação.</div>';
+    const zplWithoutReadableData = state.zpl && state.labelRefs.length && state.separationSource !== "sheet";
+    shopeeRows.innerHTML = zplWithoutReadableData
+      ? `<div class="empty-separation">
+          <strong>ZPL sem nome/rastreio em texto.</strong><br>
+          Esse arquivo parece ter vindo como imagem. Para o mapa mostrar cliente e itens, suba a planilha da Shopee junto com as etiquetas.
+        </div>`
+      : '<div class="empty-separation">Suba a planilha da Shopee ou um ZPL com texto legivel para montar o mapa de separacao.</div>';
     return;
   }
 
@@ -1072,7 +1081,9 @@ async function analyze() {
       state.separationSource = state.shopeeOrders.length ? "zpl" : "";
       shopeeSheetName.textContent = state.shopeeOrders.length
         ? `Mapa criado pelo ZPL (${state.shopeeOrders.length} etiquetas)`
-        : "Nenhuma planilha selecionada";
+        : data.labelRefs.length
+          ? "ZPL sem dados legiveis para separacao"
+          : "Nenhuma planilha selecionada";
     }
     totalLabels.textContent = data.total;
     totalBatches.textContent = data.batches.length;
