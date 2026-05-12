@@ -967,6 +967,10 @@ dialog::backdrop {
   line-height: 1.4;
 }
 
+.compact-print-area {
+  display: none;
+}
+
 @media (max-width: 1100px) {
   .app {
     grid-template-columns: 1fr;
@@ -1101,8 +1105,174 @@ dialog::backdrop {
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   body {
     background: #fff;
+  }
+
+  body.printing-compact .app > :not(.workspace),
+  body.printing-compact .workspace > :not(.compact-print-area) {
+    display: none !important;
+  }
+
+  body.printing-compact .workspace,
+  body.printing-compact .compact-print-area {
+    display: block !important;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  body.printing-compact .compact-print-area {
+    padding: 0;
+    color: #111;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  body.printing-compact .compact-print-area .head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #111;
+  }
+
+  body.printing-compact .compact-print-area .head h1 {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  body.printing-compact .compact-print-area .head p {
+    margin: 3px 0 0;
+    color: #444;
+    font-size: 10px;
+  }
+
+  body.printing-compact .compact-print-area .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  body.printing-compact .compact-print-area .order {
+    break-inside: avoid;
+    min-height: 112px;
+    padding: 6px;
+    border: 1px solid #222;
+    border-radius: 4px;
+  }
+
+  body.printing-compact .compact-print-area .order header {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    gap: 6px;
+    align-items: center;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #bbb;
+  }
+
+  body.printing-compact .compact-print-area .order header b {
+    display: inline-grid;
+    place-items: center;
+    min-height: 22px;
+    color: #fff;
+    background: #111;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  body.printing-compact .compact-print-area .order header strong {
+    font-size: 12px;
+  }
+
+  body.printing-compact .compact-print-area .order header span {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  body.printing-compact .compact-print-area .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 9px;
+  }
+
+  body.printing-compact .compact-print-area .customer {
+    margin-top: 4px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  body.printing-compact .compact-print-area .customer b,
+  body.printing-compact .compact-print-area .customer span,
+  body.printing-compact .compact-print-area .customer small {
+    display: block;
+  }
+
+  body.printing-compact .compact-print-area .customer b {
+    font-size: 11px;
+  }
+
+  body.printing-compact .compact-print-area .customer small {
+    color: #333;
+  }
+
+  body.printing-compact .compact-print-area .items {
+    display: grid;
+    gap: 3px;
+    margin-top: 5px;
+  }
+
+  body.printing-compact .compact-print-area .item {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 5px;
+    padding: 3px 4px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 9px;
+  }
+
+  body.printing-compact .compact-print-area .item strong {
+    font-size: 12px;
+  }
+
+  body.printing-compact .compact-print-area .item span,
+  body.printing-compact .compact-print-area .item em {
+    display: block;
+  }
+
+  body.printing-compact .compact-print-area .item em {
+    grid-column: 2;
+    color: #333;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  body.printing-compact .compact-print-area footer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin-top: 5px;
+    color: #555;
+    font-size: 8px;
+  }
+
+  body.printing-compact .compact-print-area footer label::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 3px;
+    border: 1px solid #555;
+    vertical-align: -2px;
   }
 
   .app {
