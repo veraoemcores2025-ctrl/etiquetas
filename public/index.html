@@ -120,10 +120,26 @@
 
         <section class="preview-panel" id="labelPreviewPanel" hidden>
           <div class="preview-header">
-            <strong>Preview da etiqueta gerada</strong>
-            <span>100 x 150 mm</span>
+            <div>
+              <span class="preview-kicker">Conferência antes da impressão</span>
+              <strong>Preview da etiqueta gerada</strong>
+            </div>
+            <div class="preview-meta">
+              <span>100 x 150 mm</span>
+              <span>4x6</span>
+            </div>
           </div>
-          <iframe id="labelPreviewFrame" title="Preview da etiqueta gerada"></iframe>
+          <div class="preview-stage">
+            <div class="preview-ruler preview-ruler-top"></div>
+            <div class="preview-ruler preview-ruler-left"></div>
+            <div class="preview-device">
+              <div class="preview-device-bar">
+                <span>Etiqueta térmica</span>
+                <span>203 dpi</span>
+              </div>
+              <iframe id="labelPreviewFrame" title="Preview da etiqueta gerada"></iframe>
+            </div>
+          </div>
         </section>
 
         <section class="summary" id="summary" hidden>
