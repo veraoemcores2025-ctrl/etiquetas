@@ -246,6 +246,31 @@ button.warning {
   border: 0;
 }
 
+.preview-panel {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #f6f8f9;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.preview-header span {
+  color: var(--muted);
+}
+
+.preview-panel iframe {
+  width: min(100%, 430px);
+  height: 650px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
 .table-section {
   overflow-x: auto;
 }

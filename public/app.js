@@ -26,7 +26,10 @@ const downloadWbuyLabelBtn = document.querySelector("#downloadWbuyLabelBtn");
 const printWbuyLabelBtn = document.querySelector("#printWbuyLabelBtn");
 const wbuyResultPanel = document.querySelector("#wbuyResultPanel");
 const wbuyResultText = document.querySelector("#wbuyResultText");
+const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
+const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
+let currentWbuyLabelUrl = "";
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
 const totalBatches = document.querySelector("#totalBatches");
@@ -108,6 +111,13 @@ function showPdfResult(url, filename, total, localPath) {
     ? `${total || state.total || ""} etiquetas salvas em: ${localPath}`.trim()
     : `${total || state.total || ""} etiquetas em PDF 100 x 150 mm.`.trim();
   resultPanel.hidden = false;
+}
+
+function showLabelPreview(url) {
+  if (currentWbuyLabelUrl) URL.revokeObjectURL(currentWbuyLabelUrl);
+  currentWbuyLabelUrl = url;
+  labelPreviewFrame.src = url;
+  labelPreviewPanel.hidden = false;
 }
 
 function setupEnvironment() {
@@ -437,6 +447,7 @@ async function fetchWbuyOrder() {
     printWbuyLabelBtn.disabled = !window.qz || !qz.websocket.isActive();
     wbuyResultPanel.hidden = false;
     wbuyResultText.textContent = JSON.stringify(data.data, null, 2).slice(0, 1200);
+    await previewWbuyLabel();
   } catch (error) {
     setWbuyStatus(error.message);
     showStatus(error.message);
@@ -462,7 +473,27 @@ async function downloadWbuyLabel() {
     const filename = `etiqueta_wbuy_${currentWbuyOrderId}_4x6.pdf`;
     const url = downloadBlob(blob, filename, true);
     showPdfResult(url, filename, 1);
+    showLabelPreview(url);
     showStatus("Etiqueta wBuy pronta. Se o download nao iniciou, clique em Baixar novamente.");
+  } catch (error) {
+    showStatus(error.message);
+  }
+}
+
+async function previewWbuyLabel() {
+  if (!currentWbuyOrderId) return;
+
+  try {
+    const response = await fetch(`/api/wbuy-label?id=${encodeURIComponent(currentWbuyOrderId)}`);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Falha ao gerar preview da etiqueta.");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    showLabelPreview(url);
   } catch (error) {
     showStatus(error.message);
   }
@@ -499,6 +530,7 @@ fileInput.addEventListener("change", async () => {
   state.batches = [];
   summary.hidden = true;
   resultPanel.hidden = true;
+  labelPreviewPanel.hidden = true;
   renderBatches();
   analyze();
   printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
