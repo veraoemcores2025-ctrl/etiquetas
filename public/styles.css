@@ -617,7 +617,7 @@ button.warning:hover {
 
 .separation-card-top {
   display: grid;
-  grid-template-columns: 78px minmax(120px, 0.9fr) minmax(170px, 1.4fr) minmax(145px, 1fr) minmax(170px, 1fr);
+  grid-template-columns: 78px minmax(120px, 0.9fr) minmax(190px, 1.35fr) minmax(145px, 1fr) minmax(220px, 1.15fr);
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -661,16 +661,71 @@ button.warning:hover {
 }
 
 .status-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 10px;
 }
 
 .status-actions button {
-  min-height: 32px;
-  padding: 0 9px;
+  min-height: 34px;
+  padding: 0 10px;
   font-size: 12px;
+  justify-content: flex-start;
+}
+
+.status-actions .ship-action {
+  background: #17633d;
+}
+
+.status-actions .ship-action:hover {
+  background: #0f4c2d;
+}
+
+.status-chip {
+  display: inline-flex !important;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 6px 10px;
+  color: #0d3f49;
+  background: #e2f4f6;
+  border: 1px solid #b8d8df;
+  border-radius: 999px;
+  font-size: 13px !important;
+  line-height: 1;
+}
+
+.status-despachado .status-chip {
+  color: #17633d;
+  background: #eaf8f1;
+  border-color: #a8d9c1;
+}
+
+.status-etiquetado .status-chip {
+  color: #744000;
+  background: #fff3d9;
+  border-color: #edcf92;
+}
+
+.step-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 9px;
+}
+
+.step-track span {
+  height: 6px;
+  border-radius: 999px;
+  background: #d6e1e6;
+}
+
+.step-track span.done {
+  background: var(--accent);
+}
+
+.status-despachado .step-track span.done {
+  background: #17824a;
 }
 
 .pick-items {

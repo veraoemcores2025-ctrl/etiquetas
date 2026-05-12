@@ -508,6 +508,7 @@ function renderShopeeSeparation() {
     const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
     const expedition = getExpeditionEntry(order.orderId);
     const status = expedition.status || "pendente";
+    const stepNumber = { pendente: 1, separado: 2, etiquetado: 3, despachado: 4 }[status] || 1;
     return `
     <article class="separation-card status-${escapeHtml(status)}" data-order-id="${escapeHtml(order.orderId)}">
       <div class="separation-card-top">
@@ -533,12 +534,18 @@ function renderShopeeSeparation() {
           <span class="table-note">${escapeHtml([order.shipping, order.city || order.uf].filter(Boolean).join(" • "))}</span>
         </div>
         <div class="expedition-main">
-          <span class="table-note">Expedicao</span>
-          <strong>${escapeHtml(statusLabel(status))}</strong>
+          <span class="table-note">Status</span>
+          <strong class="status-chip">${escapeHtml(statusLabel(status))}</strong>
+          <div class="step-track" aria-label="Etapa ${stepNumber} de 4">
+            <span class="${stepNumber >= 1 ? "done" : ""}"></span>
+            <span class="${stepNumber >= 2 ? "done" : ""}"></span>
+            <span class="${stepNumber >= 3 ? "done" : ""}"></span>
+            <span class="${stepNumber >= 4 ? "done" : ""}"></span>
+          </div>
           <div class="status-actions">
-            <button type="button" data-expedition="separado" data-order-id="${escapeHtml(order.orderId)}">Separado</button>
-            <button type="button" data-expedition="etiquetado" data-order-id="${escapeHtml(order.orderId)}">Etiquetado</button>
-            <button type="button" data-expedition="despachado" data-order-id="${escapeHtml(order.orderId)}">Despachado</button>
+            <button type="button" data-expedition="separado" data-order-id="${escapeHtml(order.orderId)}">Separar</button>
+            <button type="button" data-expedition="etiquetado" data-order-id="${escapeHtml(order.orderId)}">Etiqueta pronta</button>
+            <button class="ship-action" type="button" data-expedition="despachado" data-order-id="${escapeHtml(order.orderId)}">Despachar</button>
           </div>
         </div>
       </div>
