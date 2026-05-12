@@ -115,23 +115,13 @@
             </div>
           </div>
 
-          <div class="separation-table-wrap">
-            <table class="separation-table">
-              <thead>
-                <tr>
-                  <th>Etiqueta</th>
-                  <th>Pedido</th>
-                  <th>Cliente</th>
-                  <th>Itens para separar</th>
-                  <th>Envio</th>
-                </tr>
-              </thead>
-              <tbody id="shopeeRows">
-                <tr class="empty-row">
-                  <td colspan="5">Suba a planilha da Shopee para montar o mapa de separação.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="separation-actions">
+            <button id="downloadSeparationPdfBtn" type="button" disabled>Gerar PDF de separação</button>
+            <button id="printSeparationBtn" class="secondary" type="button" disabled>Imprimir lista</button>
+          </div>
+
+          <div class="separation-list" id="shopeeRows">
+            <div class="empty-separation">Suba a planilha da Shopee para montar o mapa de separação.</div>
           </div>
         </section>
 
@@ -261,6 +251,7 @@
     </dialog>
 
     <script src="/assets/xlsx.full.min.js"></script>
+    <script src="/assets/pdf-lib.min.js"></script>
     <script src="/qz-tray.js"></script>
     <script src="/assets/app.js"></script>
   </body>

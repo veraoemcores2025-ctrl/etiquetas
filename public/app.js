@@ -34,6 +34,8 @@ const shopeeOrderCount = document.querySelector("#shopeeOrderCount");
 const shopeeItemCount = document.querySelector("#shopeeItemCount");
 const shopeeMatchedCount = document.querySelector("#shopeeMatchedCount");
 const shopeeRows = document.querySelector("#shopeeRows");
+const downloadSeparationPdfBtn = document.querySelector("#downloadSeparationPdfBtn");
+const printSeparationBtn = document.querySelector("#printSeparationBtn");
 const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
 const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
@@ -186,7 +188,7 @@ function parseShopeeRows(rows) {
   return [...orders.values()];
 }
 
-function renderShopeeSeparation() {
+function buildShopeeSeparationRows() {
   const orders = state.shopeeOrders || [];
   const labelRefs = state.labelRefs || [];
   const byOrder = new Map(orders.map(order => [order.orderId, order]));
@@ -206,39 +208,163 @@ function renderShopeeSeparation() {
     ...orders.filter(order => !used.has(order.orderId)).map(order => ({ order, labelNumber: "", matched: false }))
   ];
 
+  return { orders, matchedRows, rows };
+}
+
+function splitVariation(value) {
+  const parts = String(value || "").split(",").map(part => part.trim()).filter(Boolean);
+  return {
+    color: parts[0] || value || "-",
+    size: parts[1] || ""
+  };
+}
+
+function renderShopeeSeparation() {
+  const { orders, matchedRows, rows } = buildShopeeSeparationRows();
+
   shopeeOrderCount.textContent = orders.length;
   shopeeItemCount.textContent = orders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.qty, 0), 0);
   shopeeMatchedCount.textContent = matchedRows.length;
+  downloadSeparationPdfBtn.disabled = !orders.length;
+  printSeparationBtn.disabled = !orders.length;
 
   if (!rows.length) {
-    shopeeRows.innerHTML = '<tr class="empty-row"><td colspan="5">Suba a planilha da Shopee para montar o mapa de separação.</td></tr>';
+    shopeeRows.innerHTML = '<div class="empty-separation">Suba a planilha da Shopee para montar o mapa de separação.</div>';
     return;
   }
 
   shopeeRows.innerHTML = rows.map(({ order, labelNumber, matched }) => `
-    <tr>
-      <td>${labelNumber ? `<strong>${labelNumber}</strong>` : '<span class="muted">sem etiqueta</span>'}</td>
-      <td>
-        <strong>${escapeHtml(order.orderId)}</strong>
-        <span class="table-note">${matched ? "cruzado" : "da planilha"}</span>
-      </td>
-      <td>
-        <strong>${escapeHtml(order.recipient || order.username)}</strong>
-        <span class="table-note">${escapeHtml(order.username || "")}</span>
-      </td>
-      <td>
-        <ul class="item-list">
-          ${order.items.map(item => `
-            <li><strong>${escapeHtml(item.qty)}x</strong> ${escapeHtml(item.product)} <span>${escapeHtml(item.variation)}</span></li>
-          `).join("")}
-        </ul>
-      </td>
-      <td>
-        <strong>${escapeHtml(order.tracking || "-")}</strong>
-        <span class="table-note">${escapeHtml([order.shipping, order.city || order.uf].filter(Boolean).join(" • "))}</span>
-      </td>
-    </tr>
+    <article class="separation-card">
+      <div class="separation-card-top">
+        <div class="label-badge ${matched ? "matched" : ""}">
+          <span>Etiqueta</span>
+          <strong>${labelNumber || "-"}</strong>
+        </div>
+        <div class="order-main">
+          <span class="table-note">Pedido Shopee</span>
+          <strong>${escapeHtml(order.orderId)}</strong>
+          <span class="table-note">${matched ? "Cruzado com etiqueta" : "Somente pela planilha"}</span>
+        </div>
+        <div class="customer-main">
+          <span class="table-note">Cliente / destinatário</span>
+          <strong>${escapeHtml(order.recipient || order.username)}</strong>
+          <span class="table-note">${escapeHtml(order.username || "")}</span>
+        </div>
+        <div class="shipping-main">
+          <span class="table-note">Rastreio</span>
+          <strong>${escapeHtml(order.tracking || "-")}</strong>
+          <span class="table-note">${escapeHtml([order.shipping, order.city || order.uf].filter(Boolean).join(" • "))}</span>
+        </div>
+      </div>
+      <div class="pick-items">
+        ${order.items.map(item => {
+          const variation = splitVariation(item.variation);
+          return `
+            <div class="pick-item">
+              <div class="qty-pill">${escapeHtml(item.qty)}x</div>
+              <div class="pick-product">
+                <strong>${escapeHtml(item.product)}</strong>
+                <div>
+                  <span>${escapeHtml(variation.color)}</span>
+                  ${variation.size ? `<span>Tam. ${escapeHtml(variation.size)}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </article>
   `).join("");
+}
+
+function wrapPdfText(text, maxChars) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+async function downloadSeparationPdf() {
+  const { rows } = buildShopeeSeparationRows();
+  if (!rows.length) {
+    showStatus("Suba a planilha da Shopee primeiro.");
+    return;
+  }
+  if (!window.PDFLib) {
+    showStatus("Gerador de PDF nao carregou. Recarregue a pagina.");
+    return;
+  }
+
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pageSize = [595.28, 841.89];
+  const margin = 34;
+  let page = pdf.addPage(pageSize);
+  let y = pageSize[1] - margin;
+
+  const drawHeader = () => {
+    page.drawText("Mapa de separacao Shopee", { x: margin, y, size: 18, font: bold, color: rgb(0.05, 0.12, 0.16) });
+    page.drawText(`Pedidos: ${state.shopeeOrders.length}   Gerado pela plataforma Verão em cores`, { x: margin, y: y - 18, size: 9, font, color: rgb(0.35, 0.42, 0.48) });
+    y -= 40;
+  };
+
+  const newPageIfNeeded = (needed) => {
+    if (y - needed > margin) return;
+    page = pdf.addPage(pageSize);
+    y = pageSize[1] - margin;
+    drawHeader();
+  };
+
+  drawHeader();
+
+  rows.forEach(({ order, labelNumber }, index) => {
+    const itemHeight = order.items.reduce((sum, item) => sum + 30 + (wrapPdfText(item.product, 48).length - 1) * 10, 0);
+    newPageIfNeeded(78 + itemHeight);
+
+    page.drawRectangle({ x: margin, y: y - 24, width: pageSize[0] - margin * 2, height: 24, color: rgb(0.93, 0.97, 0.98) });
+    page.drawText(`#${index + 1}`, { x: margin + 8, y: y - 16, size: 10, font: bold });
+    page.drawText(`Etiqueta: ${labelNumber || "-"}`, { x: margin + 44, y: y - 16, size: 10, font: bold });
+    page.drawText(`Pedido: ${order.orderId}`, { x: margin + 136, y: y - 16, size: 10, font: bold });
+    page.drawText(`Rastreio: ${order.tracking || "-"}`.slice(0, 38), { x: margin + 306, y: y - 16, size: 9, font });
+    y -= 38;
+
+    page.drawText(`Cliente: ${order.recipient || order.username}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
+    y -= 14;
+    page.drawText(`Usuario: ${order.username || "-"}   Envio: ${order.shipping || "-"}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
+    y -= 18;
+
+    order.items.forEach(item => {
+      const variation = splitVariation(item.variation);
+      const productLines = wrapPdfText(item.product, 58).slice(0, 3);
+      newPageIfNeeded(34 + productLines.length * 10);
+      page.drawText(`${item.qty}x`, { x: margin, y, size: 13, font: bold, color: rgb(0.05, 0.45, 0.5) });
+      page.drawText(productLines[0] || "-", { x: margin + 36, y, size: 10, font: bold });
+      y -= 12;
+      productLines.slice(1).forEach(line => {
+        page.drawText(line, { x: margin + 36, y, size: 9, font });
+        y -= 10;
+      });
+      page.drawText(`Cor: ${variation.color}   ${variation.size ? `Tamanho: ${variation.size}` : ""}`, { x: margin + 36, y, size: 9, font, color: rgb(0.05, 0.35, 0.4) });
+      y -= 18;
+    });
+
+    y -= 10;
+  });
+
+  const bytes = await pdf.save();
+  downloadBlob(new Blob([bytes], { type: "application/pdf" }), "mapa_separacao_shopee.pdf");
 }
 
 function showPdfResult(url, filename, total, localPath) {
@@ -741,6 +867,8 @@ testWbuyBtn.addEventListener("click", testWbuyApi);
 fetchWbuyOrderBtn.addEventListener("click", fetchWbuyOrder);
 downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
+downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
+printSeparationBtn.addEventListener("click", () => window.print());
 batchSize.addEventListener("change", () => {
   if (state.zpl) analyze();
 });
