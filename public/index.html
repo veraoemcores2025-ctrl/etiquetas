@@ -120,6 +120,39 @@
             <button id="printSeparationBtn" class="secondary" type="button" disabled>Imprimir lista</button>
           </div>
 
+          <section class="scan-panel" aria-label="Leitor de codigo">
+            <div class="scan-copy">
+              <span class="eyebrow">Leitor de codigo</span>
+              <h3>Bipe pedido ou rastreio</h3>
+              <p>Use o leitor como teclado. Ao bipar, a plataforma localiza o pedido e atualiza o status da expedicao.</p>
+            </div>
+            <div class="scan-box">
+              <label>
+                Codigo lido
+                <input id="scanInput" type="text" inputmode="text" autocomplete="off" placeholder="Bipe aqui o pedido, rastreio ou usuario">
+              </label>
+              <label>
+                Ao bipar
+                <select id="scanAction">
+                  <option value="separado">Marcar separado</option>
+                  <option value="etiquetado">Marcar etiquetado</option>
+                  <option value="despachado">Marcar despachado</option>
+                  <option value="localizar">Apenas localizar</option>
+                </select>
+              </label>
+              <button id="scanSubmitBtn" type="button">Confirmar bipagem</button>
+            </div>
+            <div class="scan-result" id="scanResult">
+              Aguardando leitura.
+            </div>
+            <div class="scan-status-grid">
+              <div><span class="stat-label">A separar</span><strong id="scanPendingCount">0</strong></div>
+              <div><span class="stat-label">Separados</span><strong id="scanSeparatedCount">0</strong></div>
+              <div><span class="stat-label">Etiquetados</span><strong id="scanLabeledCount">0</strong></div>
+              <div><span class="stat-label">Despachados</span><strong id="scanShippedCount">0</strong></div>
+            </div>
+          </section>
+
           <div class="separation-list" id="shopeeRows">
             <div class="empty-separation">Suba a planilha da Shopee para montar o mapa de separação.</div>
           </div>

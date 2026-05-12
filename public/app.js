@@ -4,7 +4,14 @@ const state = {
   total: 0,
   limit: 200,
   labelRefs: [],
-  shopeeOrders: []
+  shopeeOrders: [],
+  expedition: (() => {
+    try {
+      return JSON.parse(localStorage.getItem("expeditionStatus") || "{}");
+    } catch {
+      return {};
+    }
+  })()
 };
 
 const fileInput = document.querySelector("#fileInput");
@@ -36,6 +43,14 @@ const shopeeMatchedCount = document.querySelector("#shopeeMatchedCount");
 const shopeeRows = document.querySelector("#shopeeRows");
 const downloadSeparationPdfBtn = document.querySelector("#downloadSeparationPdfBtn");
 const printSeparationBtn = document.querySelector("#printSeparationBtn");
+const scanInput = document.querySelector("#scanInput");
+const scanAction = document.querySelector("#scanAction");
+const scanSubmitBtn = document.querySelector("#scanSubmitBtn");
+const scanResult = document.querySelector("#scanResult");
+const scanPendingCount = document.querySelector("#scanPendingCount");
+const scanSeparatedCount = document.querySelector("#scanSeparatedCount");
+const scanLabeledCount = document.querySelector("#scanLabeledCount");
+const scanShippedCount = document.querySelector("#scanShippedCount");
 const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
 const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
@@ -225,6 +240,114 @@ function shortAddress(value) {
     .join(", ");
 }
 
+function normalizeCode(value) {
+  return String(value || "").replace(/\s+/g, "").toUpperCase();
+}
+
+function getExpeditionEntry(orderId) {
+  return state.expedition[orderId] || { status: "pendente", scans: [] };
+}
+
+function statusLabel(status) {
+  return {
+    pendente: "A separar",
+    separado: "Separado",
+    etiquetado: "Etiquetado",
+    despachado: "Despachado"
+  }[status] || "A separar";
+}
+
+function saveExpedition() {
+  localStorage.setItem("expeditionStatus", JSON.stringify(state.expedition));
+}
+
+function setOrderStatus(orderId, status, scannedCode = "") {
+  const entry = getExpeditionEntry(orderId);
+  state.expedition[orderId] = {
+    ...entry,
+    status,
+    lastScan: new Date().toISOString(),
+    scans: [...(entry.scans || []), scannedCode].filter(Boolean).slice(-8)
+  };
+  saveExpedition();
+}
+
+function getOrderSearchText(order) {
+  return normalizeCode([
+    order.orderId,
+    order.tracking,
+    order.username,
+    order.recipient,
+    order.labelRecipient,
+    order.address,
+    ...order.items.flatMap(item => [item.product, item.variation])
+  ].filter(Boolean).join(" "));
+}
+
+function findOrderByScan(rawCode) {
+  const code = normalizeCode(rawCode);
+  if (!code) return null;
+
+  return (state.shopeeOrders || []).find(order => {
+    const keys = [order.orderId, order.tracking, order.username, order.recipient, order.labelRecipient]
+      .filter(Boolean)
+      .map(normalizeCode);
+    return keys.includes(code) || keys.some(key => key.includes(code) || code.includes(key)) || getOrderSearchText(order).includes(code);
+  }) || null;
+}
+
+function updateScanCounters() {
+  const orders = state.shopeeOrders || [];
+  const counts = orders.reduce((acc, order) => {
+    const status = getExpeditionEntry(order.orderId).status || "pendente";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  scanPendingCount.textContent = counts.pendente || 0;
+  scanSeparatedCount.textContent = counts.separado || 0;
+  scanLabeledCount.textContent = counts.etiquetado || 0;
+  scanShippedCount.textContent = counts.despachado || 0;
+}
+
+function focusOrderCard(orderId) {
+  const card = document.querySelector(`[data-order-id="${CSS.escape(orderId)}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("scan-highlight");
+  window.setTimeout(() => card.classList.remove("scan-highlight"), 1600);
+}
+
+function handleScan() {
+  const code = scanInput.value.trim();
+  if (!code) {
+    scanResult.textContent = "Bipe ou digite um codigo primeiro.";
+    scanInput.focus();
+    return;
+  }
+
+  const order = findOrderByScan(code);
+  if (!order) {
+    scanResult.innerHTML = `<strong>Nao encontrei esse codigo.</strong><span>Confira se a planilha da Shopee ja foi subida e tente bipar o pedido ou rastreio.</span>`;
+    scanInput.select();
+    return;
+  }
+
+  const action = scanAction.value;
+  if (action !== "localizar") {
+    setOrderStatus(order.orderId, action, code);
+  }
+
+  renderShopeeSeparation();
+  focusOrderCard(order.orderId);
+  scanResult.innerHTML = `
+    <strong>${escapeHtml(statusLabel(getExpeditionEntry(order.orderId).status))}: pedido ${escapeHtml(order.orderId)}</strong>
+    <span>${escapeHtml(order.tracking || "Sem rastreio")} - ${escapeHtml(order.username || order.recipient || "cliente")}</span>
+  `;
+  scanInput.value = "";
+  scanInput.focus();
+}
+
 function buildShopeeSeparationRows() {
   const orders = state.shopeeOrders || [];
   const labelRefs = state.labelRefs || [];
@@ -267,6 +390,7 @@ function renderShopeeSeparation() {
   shopeeMatchedCount.textContent = matchedRows.length;
   downloadSeparationPdfBtn.disabled = !orders.length;
   printSeparationBtn.disabled = !orders.length;
+  updateScanCounters();
 
   if (!rows.length) {
     shopeeRows.innerHTML = '<div class="empty-separation">Suba a planilha da Shopee para montar o mapa de separação.</div>';
@@ -277,8 +401,10 @@ function renderShopeeSeparation() {
     const protectedName = isProtectedName(order.recipient);
     const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username;
     const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
+    const expedition = getExpeditionEntry(order.orderId);
+    const status = expedition.status || "pendente";
     return `
-    <article class="separation-card">
+    <article class="separation-card status-${escapeHtml(status)}" data-order-id="${escapeHtml(order.orderId)}">
       <div class="separation-card-top">
         <div class="label-badge ${matched ? "matched" : ""}">
           <span>Etiqueta</span>
@@ -300,6 +426,15 @@ function renderShopeeSeparation() {
           <span class="table-note">Rastreio</span>
           <strong>${escapeHtml(order.tracking || "-")}</strong>
           <span class="table-note">${escapeHtml([order.shipping, order.city || order.uf].filter(Boolean).join(" • "))}</span>
+        </div>
+        <div class="expedition-main">
+          <span class="table-note">Expedicao</span>
+          <strong>${escapeHtml(statusLabel(status))}</strong>
+          <div class="status-actions">
+            <button type="button" data-expedition="separado" data-order-id="${escapeHtml(order.orderId)}">Separado</button>
+            <button type="button" data-expedition="etiquetado" data-order-id="${escapeHtml(order.orderId)}">Etiquetado</button>
+            <button type="button" data-expedition="despachado" data-order-id="${escapeHtml(order.orderId)}">Despachado</button>
+          </div>
         </div>
       </div>
       <div class="pick-items">
@@ -381,6 +516,7 @@ async function downloadSeparationPdf() {
     const protectedName = isProtectedName(order.recipient);
     const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username;
     const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
+    const expeditionStatus = statusLabel(getExpeditionEntry(order.orderId).status || "pendente");
     const itemHeight = order.items.reduce((sum, item) => sum + 30 + (wrapPdfText(pdfText(item.product), 48).length - 1) * 10, 0);
     newPageIfNeeded(78 + itemHeight);
 
@@ -388,7 +524,8 @@ async function downloadSeparationPdf() {
     drawPdfText(page, `#${index + 1}`, { x: margin + 8, y: y - 16, size: 10, font: bold });
     drawPdfText(page, `Etiqueta: ${labelNumber || "-"}`, { x: margin + 44, y: y - 16, size: 10, font: bold });
     drawPdfText(page, `Pedido: ${order.orderId}`, { x: margin + 136, y: y - 16, size: 10, font: bold });
-    drawPdfText(page, `Rastreio: ${order.tracking || "-"}`.slice(0, 38), { x: margin + 306, y: y - 16, size: 9, font });
+    drawPdfText(page, `Rastreio: ${order.tracking || "-"}`.slice(0, 32), { x: margin + 306, y: y - 16, size: 9, font });
+    drawPdfText(page, expeditionStatus.slice(0, 18), { x: margin + 460, y: y - 16, size: 9, font: bold });
     y -= 38;
 
     drawPdfText(page, `Cliente: ${displayName}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
@@ -928,6 +1065,12 @@ downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", () => window.print());
+scanSubmitBtn.addEventListener("click", handleScan);
+scanInput.addEventListener("keydown", event => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  handleScan();
+});
 batchSize.addEventListener("change", () => {
   if (state.zpl) analyze();
 });
@@ -941,4 +1084,13 @@ batchRows.addEventListener("click", event => {
 
   if (action === "zpl") downloadBatch(index, "zpl");
   if (action === "pdf") downloadBatch(index, "pdf");
+});
+
+shopeeRows.addEventListener("click", event => {
+  const button = event.target.closest("button[data-expedition]");
+  if (!button) return;
+
+  setOrderStatus(button.dataset.orderId, button.dataset.expedition, "manual");
+  renderShopeeSeparation();
+  focusOrderCard(button.dataset.orderId);
 });

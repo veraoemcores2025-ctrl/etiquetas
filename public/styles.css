@@ -475,6 +475,73 @@ button.warning:hover {
   margin-top: 16px;
 }
 
+.scan-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #b8d8df;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #f3fbfc, #ffffff);
+}
+
+.scan-copy h3 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.scan-copy p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.scan-box {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.scan-result {
+  min-height: 58px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--muted);
+}
+
+.scan-result strong,
+.scan-result span {
+  display: block;
+}
+
+.scan-result strong {
+  color: var(--text);
+}
+
+.scan-result span {
+  margin-top: 5px;
+}
+
+.scan-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scan-status-grid div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.scan-status-grid strong {
+  display: block;
+  font-size: 24px;
+}
+
 .separation-list {
   display: grid;
   gap: 14px;
@@ -496,11 +563,30 @@ button.warning:hover {
   border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 8px 18px rgba(18, 32, 43, 0.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.separation-card.status-separado {
+  border-left: 6px solid #0f7a8a;
+}
+
+.separation-card.status-etiquetado {
+  border-left: 6px solid #7c5a00;
+}
+
+.separation-card.status-despachado {
+  border-left: 6px solid #17824a;
+}
+
+.separation-card.scan-highlight {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(15, 122, 138, 0.16), 0 16px 30px rgba(18, 32, 43, 0.16);
+  transform: translateY(-2px);
 }
 
 .separation-card-top {
   display: grid;
-  grid-template-columns: 78px minmax(130px, 1fr) minmax(170px, 1.4fr) minmax(150px, 1.1fr);
+  grid-template-columns: 78px minmax(120px, 0.9fr) minmax(170px, 1.4fr) minmax(145px, 1fr) minmax(170px, 1fr);
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -537,9 +623,23 @@ button.warning:hover {
 
 .order-main > strong,
 .customer-main > strong,
-.shipping-main > strong {
+.shipping-main > strong,
+.expedition-main > strong {
   display: block;
   font-size: 16px;
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.status-actions button {
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .pick-items {
@@ -873,6 +973,10 @@ dialog::backdrop {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .scan-box {
+    grid-template-columns: 1fr;
+  }
+
   .qz-panel,
   .result-panel,
   .separation-head {
@@ -926,7 +1030,8 @@ dialog::backdrop {
 
   .field-grid,
   .summary,
-  .separation-stats {
+  .separation-stats,
+  .scan-status-grid {
     grid-template-columns: 1fr;
   }
 
@@ -986,6 +1091,10 @@ dialog::backdrop {
   .separation-head,
   .separation-stats,
   .separation-actions {
+    display: none !important;
+  }
+
+  .scan-panel {
     display: none !important;
   }
 
