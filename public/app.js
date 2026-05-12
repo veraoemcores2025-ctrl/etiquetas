@@ -29,7 +29,7 @@ const wbuyResultText = document.querySelector("#wbuyResultText");
 const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
 const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
-let currentWbuyLabelUrl = "";
+let currentPreviewUrl = "";
 const summary = document.querySelector("#summary");
 const totalLabels = document.querySelector("#totalLabels");
 const totalBatches = document.querySelector("#totalBatches");
@@ -114,10 +114,28 @@ function showPdfResult(url, filename, total, localPath) {
 }
 
 function showLabelPreview(url) {
-  if (currentWbuyLabelUrl) URL.revokeObjectURL(currentWbuyLabelUrl);
-  currentWbuyLabelUrl = url;
+  if (currentPreviewUrl && currentPreviewUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(currentPreviewUrl);
+  }
+  currentPreviewUrl = url;
   labelPreviewFrame.src = url;
   labelPreviewPanel.hidden = false;
+}
+
+async function previewZplFirstBatch() {
+  if (!state.zpl || !state.batches.length) return;
+
+  try {
+    const response = await postJson(
+      isLocalhost ? "/api/pdf" : "/api/pdf-batch",
+      payload({ batchIndex: state.batches[0].index })
+    );
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    showLabelPreview(url);
+  } catch (error) {
+    console.warn("Nao foi possivel gerar preview ZPL.", error);
+  }
 }
 
 function setupEnvironment() {
@@ -323,7 +341,7 @@ function renderBatches() {
   `).join("");
 }
 
-function analyze() {
+async function analyze() {
   if (!state.zpl) {
     showStatus("Escolha um arquivo ZPL/TXT primeiro.");
     return;
@@ -340,6 +358,7 @@ function analyze() {
     recommendation.textContent = `${data.total}/${data.limit} etiquetas`;
     summary.hidden = false;
     renderBatches();
+    await previewZplFirstBatch();
   } catch (error) {
     showStatus(error.message);
   }
@@ -353,7 +372,8 @@ async function downloadBatch(index, type) {
     const blob = await response.blob();
     const batch = state.batches.find(item => item.index === index);
     const ext = type === "pdf" ? "pdf" : "zpl";
-    downloadBlob(blob, `etiquetas_lote_${index}_${batch.start}-${batch.end}.${ext}`);
+    const url = downloadBlob(blob, `etiquetas_lote_${index}_${batch.start}-${batch.end}.${ext}`, type === "pdf");
+    if (type === "pdf") showLabelPreview(url);
     closeStatus();
   } catch (error) {
     showStatus(error.message);
@@ -375,6 +395,7 @@ async function downloadFullPdf() {
       const response = await postJson("/api/pdf-all-save", payload());
       const data = await response.json();
       showPdfResult(data.url, data.filename, data.total, data.localPath);
+      showLabelPreview(data.url);
       showStatus(`PDF salvo em Downloads: ${data.filename}`);
       return;
     }
@@ -384,6 +405,7 @@ async function downloadFullPdf() {
     const filename = "etiquetas_completo_4x6.pdf";
     const url = downloadBlob(blob, filename, true);
     showPdfResult(url, filename, state.total);
+    showLabelPreview(url);
     showStatus("PDF pronto. Se o download nao iniciou, clique em Baixar novamente na faixa verde.");
   } catch (error) {
     const message = error.name === "AbortError" ? "A geracao demorou demais. Tente baixar por lotes menores." : error.message;
