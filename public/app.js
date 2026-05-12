@@ -1,5 +1,6 @@
 const state = {
   zpl: "",
+  zplFiles: [],
   batches: [],
   total: 0,
   limit: 200,
@@ -16,6 +17,8 @@ const state = {
 
 const fileInput = document.querySelector("#fileInput");
 const fileName = document.querySelector("#fileName");
+const addMoreZplBtn = document.querySelector("#addMoreZplBtn");
+const clearZplFilesBtn = document.querySelector("#clearZplFilesBtn");
 const batchSize = document.querySelector("#batchSize");
 const labelSize = document.querySelector("#labelSize");
 const density = document.querySelector("#density");
@@ -153,6 +156,91 @@ function payload(extra = {}) {
     size: labelSize.value,
     ...extra
   };
+}
+
+function fileKey(file) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function formatKb(bytes) {
+  return `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
+}
+
+function updateZplFileSummary() {
+  const totalBytes = state.zplFiles.reduce((sum, file) => sum + file.size, 0);
+  clearZplFilesBtn.disabled = !state.zplFiles.length;
+
+  if (!state.zplFiles.length) {
+    fileName.textContent = "Nenhum arquivo selecionado";
+    return;
+  }
+
+  if (state.zplFiles.length === 1) {
+    const file = state.zplFiles[0];
+    fileName.textContent = `${file.name} (${formatKb(file.size)})`;
+    return;
+  }
+
+  const names = state.zplFiles.slice(0, 3).map(file => file.name).join(" + ");
+  const extra = state.zplFiles.length > 3 ? ` + ${state.zplFiles.length - 3} arquivo(s)` : "";
+  fileName.textContent = `${state.zplFiles.length} arquivos combinados (${formatKb(totalBytes)}): ${names}${extra}`;
+}
+
+function resetZplOutputs() {
+  state.batches = [];
+  state.labelRefs = [];
+  summary.hidden = true;
+  resultPanel.hidden = true;
+  labelPreviewPanel.hidden = true;
+  renderBatches();
+}
+
+async function addZplFiles(files) {
+  const selectedFiles = Array.from(files || []);
+  if (!selectedFiles.length) return;
+
+  const known = new Set(state.zplFiles.map(file => file.key));
+  const entries = [];
+
+  for (const file of selectedFiles) {
+    const key = fileKey(file);
+    if (known.has(key)) continue;
+    known.add(key);
+    entries.push({
+      key,
+      name: file.name,
+      size: file.size,
+      lastModified: file.lastModified,
+      text: await file.text()
+    });
+  }
+
+  if (!entries.length) {
+    showStatus("Esse arquivo ja esta na lista.");
+    fileInput.value = "";
+    return;
+  }
+
+  state.zplFiles.push(...entries);
+  state.zpl = state.zplFiles.map(file => file.text).join("\n");
+  updateZplFileSummary();
+  resetZplOutputs();
+  analyze();
+  printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+  printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+  fileInput.value = "";
+}
+
+function clearZplFiles() {
+  state.zplFiles = [];
+  state.zpl = "";
+  fileInput.value = "";
+  updateZplFileSummary();
+  resetZplOutputs();
+  downloadFullPdfBtn.disabled = true;
+  downloadAllBtn.disabled = true;
+  printQzBtn.disabled = true;
+  printPdfQzBtn.disabled = true;
 }
 
 function extractLabelRefs(label) {
@@ -1118,24 +1206,7 @@ async function printWbuyLabel() {
 }
 
 fileInput.addEventListener("change", async () => {
-  const files = Array.from(fileInput.files || []);
-  if (!files.length) return;
-
-  const parts = await Promise.all(files.map(file => file.text()));
-  state.zpl = parts.join("\n");
-  const totalKb = Math.ceil(files.reduce((sum, file) => sum + file.size, 0) / 1024);
-  fileName.textContent = files.length === 1
-    ? `${files[0].name} (${totalKb} KB)`
-    : `${files.length} arquivos combinados (${totalKb} KB)`;
-  state.batches = [];
-  state.labelRefs = [];
-  summary.hidden = true;
-  resultPanel.hidden = true;
-  labelPreviewPanel.hidden = true;
-  renderBatches();
-  analyze();
-  printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
-  printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+  await addZplFiles(fileInput.files);
 });
 
 shopeeSheetInput.addEventListener("change", async () => {
@@ -1163,7 +1234,10 @@ shopeeSheetInput.addEventListener("change", async () => {
 });
 
 setupEnvironment();
+updateZplFileSummary();
 analyzeBtn.addEventListener("click", analyze);
+addMoreZplBtn.addEventListener("click", () => fileInput.click());
+clearZplFilesBtn.addEventListener("click", clearZplFiles);
 downloadFullPdfBtn.addEventListener("click", downloadFullPdf);
 downloadAllBtn.addEventListener("click", downloadAllZpl);
 connectQzBtn.addEventListener("click", connectQz);
