@@ -448,6 +448,26 @@ button.warning:hover {
   font-size: 12px;
 }
 
+.privacy-note {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 4px 8px;
+  color: #7a4a00;
+  background: #fff3d9;
+  border: 1px solid #edcf92;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.address-note {
+  display: block;
+  margin-top: 7px;
+  color: #263946;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .separation-actions {
   display: flex;
   flex-wrap: wrap;

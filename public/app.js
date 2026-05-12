@@ -126,9 +126,18 @@ function payload(extra = {}) {
 function extractLabelRefs(label) {
   const orderIds = [...label.matchAll(/\b\d{6}[A-Z0-9]{6,}\b/g)].map(match => match[0]);
   const trackingIds = [...label.matchAll(/\bBR[A-Z0-9]{10,18}\b/g)].map(match => match[0]);
+  const zplTexts = [...label.matchAll(/\^FD([\s\S]*?)\^FS/g)]
+    .map(match => match[1].replace(/\^FH\\?/g, "").replace(/_/g, " ").trim())
+    .filter(text => text && !/^(DESTINATARIO|REMETENTE|PEDIDO|CEP|BAIRRO)$/i.test(text));
+  const recipient = zplTexts.find(text =>
+    /^[A-Za-zÀ-ÿ' ]{6,}$/.test(text) &&
+    !/\d/.test(text) &&
+    !/\b(RUA|AVENIDA|CEP|BAIRRO|SHOPEE|JADLOG|ENVIO)\b/i.test(text)
+  );
   return {
     orderId: orderIds[0] || "",
-    tracking: trackingIds[0] || ""
+    tracking: trackingIds[0] || "",
+    recipient: recipient || ""
   };
 }
 
@@ -174,6 +183,7 @@ function parseShopeeRows(rows) {
         tracking,
         username: getCell(row, headers, ["Nome de usuário (comprador)", "Nome de usuario (comprador)"]),
         recipient: getCell(row, headers, ["Nome do destinatário", "Nome do destinatario"]),
+        address: getCell(row, headers, ["Endereço de entrega", "Endereco de entrega"]),
         shipping: getCell(row, headers, ["Opção de envio", "Opcao de envio", "Método de envio", "Metodo de envio"]),
         city: getCell(row, headers, ["Cidade"]),
         uf: getCell(row, headers, ["UF"]),
@@ -188,6 +198,20 @@ function parseShopeeRows(rows) {
   return [...orders.values()];
 }
 
+function isProtectedName(value) {
+  const text = String(value || "").trim();
+  return !text || text.includes("*") || /^N\*+/i.test(text);
+}
+
+function shortAddress(value) {
+  return String(value || "")
+    .split(",")
+    .slice(0, 3)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 function buildShopeeSeparationRows() {
   const orders = state.shopeeOrders || [];
   const labelRefs = state.labelRefs || [];
@@ -199,6 +223,9 @@ function buildShopeeSeparationRows() {
   labelRefs.forEach((ref, index) => {
     const order = byOrder.get(ref.orderId) || byTracking.get(ref.tracking);
     if (!order) return;
+    if (isProtectedName(order.recipient) && ref.recipient) {
+      order.labelRecipient = ref.recipient;
+    }
     used.add(order.orderId);
     matchedRows.push({ order, labelNumber: index + 1, matched: true });
   });
@@ -233,7 +260,11 @@ function renderShopeeSeparation() {
     return;
   }
 
-  shopeeRows.innerHTML = rows.map(({ order, labelNumber, matched }) => `
+  shopeeRows.innerHTML = rows.map(({ order, labelNumber, matched }) => {
+    const protectedName = isProtectedName(order.recipient);
+    const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username;
+    const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
+    return `
     <article class="separation-card">
       <div class="separation-card-top">
         <div class="label-badge ${matched ? "matched" : ""}">
@@ -246,9 +277,11 @@ function renderShopeeSeparation() {
           <span class="table-note">${matched ? "Cruzado com etiqueta" : "Somente pela planilha"}</span>
         </div>
         <div class="customer-main">
-          <span class="table-note">Cliente / destinatário</span>
-          <strong>${escapeHtml(order.recipient || order.username)}</strong>
-          <span class="table-note">${escapeHtml(order.username || "")}</span>
+          <span class="table-note">Cliente / destinatario</span>
+          <strong>${escapeHtml(displayName)}</strong>
+          <span class="privacy-note">${protectedName && !order.labelRecipient ? "Nome protegido pela Shopee" : "Nome para conferencia"}</span>
+          <span class="table-note">Usuario: ${escapeHtml(order.username || "-")}</span>
+          <span class="address-note">${escapeHtml(addressLine)}</span>
         </div>
         <div class="shipping-main">
           <span class="table-note">Rastreio</span>
@@ -274,7 +307,8 @@ function renderShopeeSeparation() {
         }).join("")}
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function wrapPdfText(text, maxChars) {
@@ -330,6 +364,9 @@ async function downloadSeparationPdf() {
   drawHeader();
 
   rows.forEach(({ order, labelNumber }, index) => {
+    const protectedName = isProtectedName(order.recipient);
+    const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username;
+    const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
     const itemHeight = order.items.reduce((sum, item) => sum + 30 + (wrapPdfText(item.product, 48).length - 1) * 10, 0);
     newPageIfNeeded(78 + itemHeight);
 
@@ -340,9 +377,11 @@ async function downloadSeparationPdf() {
     page.drawText(`Rastreio: ${order.tracking || "-"}`.slice(0, 38), { x: margin + 306, y: y - 16, size: 9, font });
     y -= 38;
 
-    page.drawText(`Cliente: ${order.recipient || order.username}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
+    page.drawText(`Cliente: ${displayName}`.slice(0, 80), { x: margin, y, size: 10, font: bold });
     y -= 14;
-    page.drawText(`Usuario: ${order.username || "-"}   Envio: ${order.shipping || "-"}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
+    page.drawText(`${protectedName && !order.labelRecipient ? "Nome protegido pela Shopee   " : ""}Usuario: ${order.username || "-"}   Envio: ${order.shipping || "-"}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
+    y -= 12;
+    page.drawText(`Endereco: ${addressLine}`.slice(0, 96), { x: margin, y, size: 8.5, font, color: rgb(0.35, 0.42, 0.48) });
     y -= 18;
 
     order.items.forEach(item => {
