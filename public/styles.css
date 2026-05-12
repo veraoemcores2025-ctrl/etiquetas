@@ -497,9 +497,28 @@ button.warning:hover {
 
 .scan-box {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px) auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px) minmax(150px, auto) auto auto;
   gap: 12px;
   align-items: end;
+}
+
+.scan-toggle {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 13px;
+}
+
+.scan-toggle input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
 }
 
 .scan-result {
@@ -509,6 +528,18 @@ button.warning:hover {
   border-radius: var(--radius);
   background: #fff;
   color: var(--muted);
+}
+
+.scan-result.scan-success {
+  color: #17633d;
+  background: #eaf8f1;
+  border-color: #a8d9c1;
+}
+
+.scan-result.scan-error {
+  color: #8f260d;
+  background: #fff1ea;
+  border-color: #efb49f;
 }
 
 .scan-result strong,

@@ -45,7 +45,9 @@ const downloadSeparationPdfBtn = document.querySelector("#downloadSeparationPdfB
 const printSeparationBtn = document.querySelector("#printSeparationBtn");
 const scanInput = document.querySelector("#scanInput");
 const scanAction = document.querySelector("#scanAction");
+const scanAutoSubmit = document.querySelector("#scanAutoSubmit");
 const scanSubmitBtn = document.querySelector("#scanSubmitBtn");
+const scanFocusBtn = document.querySelector("#scanFocusBtn");
 const scanResult = document.querySelector("#scanResult");
 const scanPendingCount = document.querySelector("#scanPendingCount");
 const scanSeparatedCount = document.querySelector("#scanSeparatedCount");
@@ -70,6 +72,7 @@ const resultLink = document.querySelector("#resultLink");
 const openDownloadsBtn = document.querySelector("#openDownloadsBtn");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+let scanTimer = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -318,6 +321,28 @@ function focusOrderCard(orderId) {
   window.setTimeout(() => card.classList.remove("scan-highlight"), 1600);
 }
 
+function playScanTone(found) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = found ? 880 : 220;
+    oscillator.type = "sine";
+    gain.gain.setValueAtTime(0.001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.14);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.16);
+    window.setTimeout(() => context.close(), 220);
+  } catch {
+    // Somente um retorno sonoro de conveniencia; se o navegador bloquear, a bipagem continua.
+  }
+}
+
 function handleScan() {
   const code = scanInput.value.trim();
   if (!code) {
@@ -328,7 +353,9 @@ function handleScan() {
 
   const order = findOrderByScan(code);
   if (!order) {
+    scanResult.className = "scan-result scan-error";
     scanResult.innerHTML = `<strong>Nao encontrei esse codigo.</strong><span>Confira se a planilha da Shopee ja foi subida e tente bipar o pedido ou rastreio.</span>`;
+    playScanTone(false);
     scanInput.select();
     return;
   }
@@ -340,12 +367,22 @@ function handleScan() {
 
   renderShopeeSeparation();
   focusOrderCard(order.orderId);
+  scanResult.className = "scan-result scan-success";
   scanResult.innerHTML = `
     <strong>${escapeHtml(statusLabel(getExpeditionEntry(order.orderId).status))}: pedido ${escapeHtml(order.orderId)}</strong>
     <span>${escapeHtml(order.tracking || "Sem rastreio")} - ${escapeHtml(order.username || order.recipient || "cliente")}</span>
   `;
+  playScanTone(true);
   scanInput.value = "";
   scanInput.focus();
+}
+
+function scheduleAutoScan() {
+  if (!scanAutoSubmit.checked) return;
+  window.clearTimeout(scanTimer);
+  const code = scanInput.value.trim();
+  if (code.length < 6) return;
+  scanTimer = window.setTimeout(handleScan, 220);
 }
 
 function buildShopeeSeparationRows() {
@@ -1066,11 +1103,19 @@ printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", () => window.print());
 scanSubmitBtn.addEventListener("click", handleScan);
+scanFocusBtn.addEventListener("click", () => {
+  scanInput.focus();
+  scanInput.select();
+  scanResult.className = "scan-result";
+  scanResult.textContent = "Leitor ativo. Pode bipar o proximo pedido.";
+});
 scanInput.addEventListener("keydown", event => {
   if (event.key !== "Enter") return;
   event.preventDefault();
+  window.clearTimeout(scanTimer);
   handleScan();
 });
+scanInput.addEventListener("input", scheduleAutoScan);
 batchSize.addEventListener("change", () => {
   if (state.zpl) analyze();
 });
