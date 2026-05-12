@@ -369,6 +369,117 @@ button.warning:hover {
   border-bottom: 1px solid var(--success-line);
 }
 
+.separation-panel {
+  padding: 22px 28px 26px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.separation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.separation-head h2 {
+  margin-bottom: 6px;
+  font-size: 22px;
+}
+
+.separation-head p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.sheet-upload {
+  flex: 0 0 260px;
+  min-height: 76px;
+  padding: 14px;
+  border: 1px dashed #8eb2bf;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  cursor: pointer;
+}
+
+.sheet-upload span,
+.sheet-upload small {
+  display: block;
+}
+
+.sheet-upload span {
+  font-weight: 900;
+}
+
+.sheet-upload small {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.sheet-upload input {
+  display: none;
+}
+
+.separation-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.separation-stats div {
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.separation-stats strong {
+  font-size: 24px;
+}
+
+.separation-table-wrap {
+  margin-top: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.separation-table th,
+.separation-table td {
+  vertical-align: top;
+}
+
+.table-note,
+.muted {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.item-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-list li {
+  padding: 8px;
+  background: #f8fafb;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.item-list span {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
 .preview-panel {
   padding: 22px 28px 28px;
   border-bottom: 1px solid var(--line);
@@ -633,9 +744,14 @@ dialog::backdrop {
   }
 
   .qz-panel,
-  .result-panel {
+  .result-panel,
+  .separation-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .sheet-upload {
+    flex-basis: auto;
   }
 
   .qz-actions input {
@@ -664,6 +780,7 @@ dialog::backdrop {
   .result-panel,
   .preview-panel,
   .summary div,
+  .separation-panel,
   .side {
     padding-left: 16px;
     padding-right: 16px;
@@ -674,7 +791,8 @@ dialog::backdrop {
   }
 
   .field-grid,
-  .summary {
+  .summary,
+  .separation-stats {
     grid-template-columns: 1fr;
   }
 

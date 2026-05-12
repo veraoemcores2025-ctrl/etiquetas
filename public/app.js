@@ -2,7 +2,9 @@ const state = {
   zpl: "",
   batches: [],
   total: 0,
-  limit: 200
+  limit: 200,
+  labelRefs: [],
+  shopeeOrders: []
 };
 
 const fileInput = document.querySelector("#fileInput");
@@ -26,6 +28,12 @@ const downloadWbuyLabelBtn = document.querySelector("#downloadWbuyLabelBtn");
 const printWbuyLabelBtn = document.querySelector("#printWbuyLabelBtn");
 const wbuyResultPanel = document.querySelector("#wbuyResultPanel");
 const wbuyResultText = document.querySelector("#wbuyResultText");
+const shopeeSheetInput = document.querySelector("#shopeeSheetInput");
+const shopeeSheetName = document.querySelector("#shopeeSheetName");
+const shopeeOrderCount = document.querySelector("#shopeeOrderCount");
+const shopeeItemCount = document.querySelector("#shopeeItemCount");
+const shopeeMatchedCount = document.querySelector("#shopeeMatchedCount");
+const shopeeRows = document.querySelector("#shopeeRows");
 const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
 const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
@@ -45,6 +53,15 @@ const resultLink = document.querySelector("#resultLink");
 const openDownloadsBtn = document.querySelector("#openDownloadsBtn");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 function showStatus(message) {
   statusText.textContent = message;
@@ -102,6 +119,126 @@ function payload(extra = {}) {
     size: labelSize.value,
     ...extra
   };
+}
+
+function extractLabelRefs(label) {
+  const orderIds = [...label.matchAll(/\b\d{6}[A-Z0-9]{6,}\b/g)].map(match => match[0]);
+  const trackingIds = [...label.matchAll(/\bBR[A-Z0-9]{10,18}\b/g)].map(match => match[0]);
+  return {
+    orderId: orderIds[0] || "",
+    tracking: trackingIds[0] || ""
+  };
+}
+
+function normalizeHeader(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getCell(row, headers, names) {
+  let fallback = "";
+  for (const name of names) {
+    for (let index = 0; index < headers.length; index += 1) {
+      if (normalizeHeader(headers[index]) !== normalizeHeader(name)) continue;
+      const value = String(row[index] ?? "").trim();
+      if (value) return value;
+      fallback = value;
+    }
+  }
+  return fallback;
+}
+
+function parseShopeeRows(rows) {
+  if (!rows.length) return [];
+
+  const headers = rows[0].map(value => String(value || "").trim());
+  const orders = new Map();
+
+  for (const row of rows.slice(1)) {
+    const orderId = getCell(row, headers, ["ID do pedido"]);
+    if (!orderId) continue;
+
+    const tracking = getCell(row, headers, ["Número de rastreamento", "Numero de rastreamento"]);
+    const product = getCell(row, headers, ["Nome do Produto"]);
+    const variation = getCell(row, headers, ["Nome da variação", "Nome da variacao"]);
+    const qty = Number(getCell(row, headers, ["Quantidade"])) || 1;
+
+    if (!orders.has(orderId)) {
+      orders.set(orderId, {
+        orderId,
+        tracking,
+        username: getCell(row, headers, ["Nome de usuário (comprador)", "Nome de usuario (comprador)"]),
+        recipient: getCell(row, headers, ["Nome do destinatário", "Nome do destinatario"]),
+        shipping: getCell(row, headers, ["Opção de envio", "Opcao de envio", "Método de envio", "Metodo de envio"]),
+        city: getCell(row, headers, ["Cidade"]),
+        uf: getCell(row, headers, ["UF"]),
+        cep: getCell(row, headers, ["CEP"]),
+        items: []
+      });
+    }
+
+    orders.get(orderId).items.push({ product, variation, qty });
+  }
+
+  return [...orders.values()];
+}
+
+function renderShopeeSeparation() {
+  const orders = state.shopeeOrders || [];
+  const labelRefs = state.labelRefs || [];
+  const byOrder = new Map(orders.map(order => [order.orderId, order]));
+  const byTracking = new Map(orders.filter(order => order.tracking).map(order => [order.tracking, order]));
+  const used = new Set();
+  const matchedRows = [];
+
+  labelRefs.forEach((ref, index) => {
+    const order = byOrder.get(ref.orderId) || byTracking.get(ref.tracking);
+    if (!order) return;
+    used.add(order.orderId);
+    matchedRows.push({ order, labelNumber: index + 1, matched: true });
+  });
+
+  const rows = [
+    ...matchedRows,
+    ...orders.filter(order => !used.has(order.orderId)).map(order => ({ order, labelNumber: "", matched: false }))
+  ];
+
+  shopeeOrderCount.textContent = orders.length;
+  shopeeItemCount.textContent = orders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.qty, 0), 0);
+  shopeeMatchedCount.textContent = matchedRows.length;
+
+  if (!rows.length) {
+    shopeeRows.innerHTML = '<tr class="empty-row"><td colspan="5">Suba a planilha da Shopee para montar o mapa de separação.</td></tr>';
+    return;
+  }
+
+  shopeeRows.innerHTML = rows.map(({ order, labelNumber, matched }) => `
+    <tr>
+      <td>${labelNumber ? `<strong>${labelNumber}</strong>` : '<span class="muted">sem etiqueta</span>'}</td>
+      <td>
+        <strong>${escapeHtml(order.orderId)}</strong>
+        <span class="table-note">${matched ? "cruzado" : "da planilha"}</span>
+      </td>
+      <td>
+        <strong>${escapeHtml(order.recipient || order.username)}</strong>
+        <span class="table-note">${escapeHtml(order.username || "")}</span>
+      </td>
+      <td>
+        <ul class="item-list">
+          ${order.items.map(item => `
+            <li><strong>${escapeHtml(item.qty)}x</strong> ${escapeHtml(item.product)} <span>${escapeHtml(item.variation)}</span></li>
+          `).join("")}
+        </ul>
+      </td>
+      <td>
+        <strong>${escapeHtml(order.tracking || "-")}</strong>
+        <span class="table-note">${escapeHtml([order.shipping, order.city || order.uf].filter(Boolean).join(" • "))}</span>
+      </td>
+    </tr>
+  `).join("");
 }
 
 function showPdfResult(url, filename, total, localPath) {
@@ -306,6 +443,7 @@ function analyzeZplLocally(zpl, requestedBatchSize) {
     total: labels.length,
     rawBlocks: raw.length,
     limit: maxLabels,
+    labelRefs: labels.map(extractLabelRefs),
     batches
   };
 }
@@ -352,12 +490,14 @@ async function analyze() {
     state.batches = data.batches;
     state.total = data.total;
     state.limit = data.limit;
+    state.labelRefs = data.labelRefs;
     totalLabels.textContent = data.total;
     totalBatches.textContent = data.batches.length;
     rawBlocks.textContent = data.rawBlocks || data.total;
     recommendation.textContent = `${data.total}/${data.limit} etiquetas`;
     summary.hidden = false;
     renderBatches();
+    renderShopeeSeparation();
     await previewZplFirstBatch();
   } catch (error) {
     showStatus(error.message);
@@ -554,6 +694,7 @@ fileInput.addEventListener("change", async () => {
     ? `${files[0].name} (${totalKb} KB)`
     : `${files.length} arquivos combinados (${totalKb} KB)`;
   state.batches = [];
+  state.labelRefs = [];
   summary.hidden = true;
   resultPanel.hidden = true;
   labelPreviewPanel.hidden = true;
@@ -561,6 +702,30 @@ fileInput.addEventListener("change", async () => {
   analyze();
   printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
   printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
+});
+
+shopeeSheetInput.addEventListener("change", async () => {
+  const file = shopeeSheetInput.files?.[0];
+  if (!file) return;
+
+  if (!window.XLSX) {
+    showStatus("Leitor de planilha nao carregou. Recarregue a pagina e tente novamente.");
+    return;
+  }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    const orders = parseShopeeRows(rows);
+
+    state.shopeeOrders = orders;
+    shopeeSheetName.textContent = `${file.name} (${orders.length} pedidos)`;
+    renderShopeeSeparation();
+  } catch (error) {
+    showStatus(error.message || "Nao consegui ler a planilha da Shopee.");
+  }
 });
 
 setupEnvironment();

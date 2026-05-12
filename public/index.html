@@ -20,6 +20,7 @@
         <div class="nav-section">
           <span>Operação</span>
           <a class="nav-item active" href="#fileInput">Etiquetas</a>
+          <a class="nav-item" href="#shopeeSheetInput">Separação</a>
           <a class="nav-item" href="#wbuyOrderId">Pedidos wBuy</a>
           <a class="nav-item" href="#labelPreviewPanel">Preview</a>
         </div>
@@ -82,6 +83,55 @@
             <button id="analyzeBtn" type="button">Analisar arquivo</button>
             <button id="downloadFullPdfBtn" type="button" disabled>Gerar PDF em Downloads</button>
             <button id="downloadAllBtn" type="button" disabled>Baixar todos os lotes ZPL</button>
+          </div>
+        </section>
+
+        <section class="separation-panel" id="separationPanel">
+          <div class="separation-head">
+            <div>
+              <span class="eyebrow">Separação Shopee</span>
+              <h2>Mapa de itens por pedido</h2>
+              <p>Suba a planilha exportada da Shopee para ver produto, variação e quantidade na hora de separar.</p>
+            </div>
+            <label class="sheet-upload" for="shopeeSheetInput">
+              <span>Subir planilha Shopee</span>
+              <small id="shopeeSheetName">Nenhuma planilha selecionada</small>
+              <input id="shopeeSheetInput" type="file" accept=".xlsx,.xls,.csv">
+            </label>
+          </div>
+
+          <div class="separation-stats">
+            <div>
+              <span class="stat-label">Pedidos</span>
+              <strong id="shopeeOrderCount">0</strong>
+            </div>
+            <div>
+              <span class="stat-label">Itens</span>
+              <strong id="shopeeItemCount">0</strong>
+            </div>
+            <div>
+              <span class="stat-label">Cruzados com etiquetas</span>
+              <strong id="shopeeMatchedCount">0</strong>
+            </div>
+          </div>
+
+          <div class="separation-table-wrap">
+            <table class="separation-table">
+              <thead>
+                <tr>
+                  <th>Etiqueta</th>
+                  <th>Pedido</th>
+                  <th>Cliente</th>
+                  <th>Itens para separar</th>
+                  <th>Envio</th>
+                </tr>
+              </thead>
+              <tbody id="shopeeRows">
+                <tr class="empty-row">
+                  <td colspan="5">Suba a planilha da Shopee para montar o mapa de separação.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -210,6 +260,7 @@
       <button id="closeDialog" type="button">Fechar</button>
     </dialog>
 
+    <script src="/assets/xlsx.full.min.js"></script>
     <script src="/qz-tray.js"></script>
     <script src="/assets/app.js"></script>
   </body>
