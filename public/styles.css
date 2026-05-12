@@ -1,6 +1,9 @@
 :root {
   color-scheme: light;
   --bg: #f3f6f8;
+  --nav: #102631;
+  --nav-soft: #173644;
+  --nav-text: #dce8ec;
   --surface: #ffffff;
   --surface-soft: #f8fafb;
   --surface-strong: #edf3f5;
@@ -43,10 +46,107 @@ select {
 
 .app {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 20px;
+  grid-template-columns: 238px minmax(0, 1fr) 318px;
+  gap: 18px;
   min-height: 100vh;
   padding: 24px;
+}
+
+.app-nav {
+  align-self: start;
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: calc(100vh - 48px);
+  padding: 18px;
+  background: var(--nav);
+  color: var(--nav-text);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius);
+  background: #ffffff;
+  color: var(--accent-dark);
+  font-weight: 900;
+}
+
+.brand strong,
+.brand span {
+  display: block;
+}
+
+.brand strong {
+  color: #fff;
+}
+
+.brand span {
+  margin-top: 3px;
+  color: #9fb6c0;
+  font-size: 13px;
+}
+
+.nav-section {
+  display: grid;
+  gap: 7px;
+}
+
+.nav-section > span {
+  color: #8facb8;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 11px;
+  color: var(--nav-text);
+  text-decoration: none;
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--nav-soft);
+  color: #fff;
+}
+
+.nav-card {
+  margin-top: auto;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+}
+
+.nav-card strong {
+  color: #fff;
+}
+
+.nav-card p {
+  margin: 6px 0 0;
+  color: #b9cbd2;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .workspace,
@@ -69,6 +169,15 @@ select {
   padding: 26px 28px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, #ffffff, #f8fbfc);
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 h1,
@@ -131,7 +240,7 @@ h1 {
 
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
   margin-top: 18px;
 }
@@ -414,8 +523,26 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 
+  .app-nav,
   .side {
     position: static;
+    min-height: auto;
+  }
+
+  .app-nav {
+    gap: 14px;
+  }
+
+  .nav-section {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nav-section > span {
+    grid-column: 1 / -1;
+  }
+
+  .nav-card {
+    margin-top: 0;
   }
 }
 
@@ -444,6 +571,7 @@ dialog::backdrop {
 }
 
 @media (max-width: 620px) {
+  .app-nav,
   .topbar,
   .controls,
   .qz-panel,
@@ -453,6 +581,10 @@ dialog::backdrop {
   .side {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .nav-section {
+    grid-template-columns: 1fr;
   }
 
   .field-grid,
