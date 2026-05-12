@@ -385,6 +385,112 @@ function scheduleAutoScan() {
   scanTimer = window.setTimeout(handleScan, 220);
 }
 
+function buildCompactSeparationHtml() {
+  const { rows } = buildShopeeSeparationRows();
+  const printedAt = new Date().toLocaleString("pt-BR");
+  const cards = rows.map(({ order, labelNumber, matched }, index) => {
+    const protectedName = isProtectedName(order.recipient);
+    const displayName = order.labelRecipient || (protectedName ? order.username : order.recipient) || order.username || "-";
+    const addressLine = shortAddress(order.address) || [order.city, order.uf].filter(Boolean).join(" / ");
+    const status = statusLabel(getExpeditionEntry(order.orderId).status || "pendente");
+    const items = order.items.map(item => {
+      const variation = splitVariation(item.variation);
+      return `
+        <div class="item">
+          <strong>${escapeHtml(item.qty)}x</strong>
+          <span>${escapeHtml(item.product || "-")}</span>
+          <em>${escapeHtml([variation.color, variation.size ? `Tam. ${variation.size}` : ""].filter(Boolean).join(" | "))}</em>
+        </div>`;
+    }).join("");
+
+    return `
+      <article class="order">
+        <header>
+          <b>#${index + 1}</b>
+          <strong>${escapeHtml(order.orderId)}</strong>
+          <span>${escapeHtml(status)}</span>
+        </header>
+        <div class="meta">
+          <span>Etiqueta: <b>${escapeHtml(labelNumber || "-")}</b> ${matched ? "cruzada" : "planilha"}</span>
+          <span>Rastreio: <b>${escapeHtml(order.tracking || "-")}</b></span>
+        </div>
+        <div class="customer">
+          <b>${escapeHtml(displayName)}</b>
+          <span>${protectedName && !order.labelRecipient ? "Nome protegido pela Shopee | " : ""}Usuario: ${escapeHtml(order.username || "-")}</span>
+          <small>${escapeHtml(addressLine)}</small>
+        </div>
+        <div class="items">${items}</div>
+        <footer>
+          <label>Separado</label><label>Etiquetado</label><label>Despachado</label>
+        </footer>
+      </article>`;
+  }).join("");
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Mapa compacto de separacao</title>
+  <style>
+    @page { size: A4 portrait; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; }
+    .head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; border-bottom: 2px solid #111; padding-bottom: 6px; }
+    .head h1 { margin: 0; font-size: 16px; }
+    .head p { margin: 3px 0 0; font-size: 10px; color: #444; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .order { break-inside: avoid; border: 1px solid #222; border-radius: 4px; padding: 6px; min-height: 112px; }
+    .order header { display: grid; grid-template-columns: 26px 1fr auto; gap: 6px; align-items: center; padding-bottom: 4px; border-bottom: 1px solid #bbb; }
+    .order header b { display: inline-grid; place-items: center; min-height: 22px; background: #111; color: #fff; border-radius: 3px; font-size: 11px; }
+    .order header strong { font-size: 12px; }
+    .order header span { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; font-size: 9px; }
+    .customer { margin-top: 4px; font-size: 10px; line-height: 1.25; }
+    .customer b, .customer span, .customer small { display: block; }
+    .customer b { font-size: 11px; }
+    .customer small { color: #333; }
+    .items { display: grid; gap: 3px; margin-top: 5px; }
+    .item { display: grid; grid-template-columns: 28px 1fr; gap: 5px; padding: 3px 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 9px; }
+    .item strong { font-size: 12px; }
+    .item span, .item em { display: block; }
+    .item em { grid-column: 2; color: #333; font-style: normal; font-weight: 700; }
+    footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; font-size: 8px; color: #555; }
+    footer label::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 3px; border: 1px solid #555; vertical-align: -2px; }
+  </style>
+</head>
+<body>
+  <section class="head">
+    <div>
+      <h1>Mapa compacto de separacao</h1>
+      <p>Verao em cores | ${rows.length} pedidos | ${printedAt}</p>
+    </div>
+    <p>Use para separar varios pedidos por folha.</p>
+  </section>
+  <main class="grid">${cards}</main>
+</body>
+</html>`;
+}
+
+function printCompactSeparation() {
+  const { rows } = buildShopeeSeparationRows();
+  if (!rows.length) {
+    showStatus("Suba a planilha da Shopee primeiro.");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
+  if (!printWindow) {
+    showStatus("O navegador bloqueou a janela de impressao. Permita pop-ups para este site.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(buildCompactSeparationHtml());
+  printWindow.document.close();
+  printWindow.focus();
+  window.setTimeout(() => printWindow.print(), 350);
+}
+
 function buildShopeeSeparationRows() {
   const orders = state.shopeeOrders || [];
   const labelRefs = state.labelRefs || [];
@@ -1101,7 +1207,7 @@ fetchWbuyOrderBtn.addEventListener("click", fetchWbuyOrder);
 downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
-printSeparationBtn.addEventListener("click", () => window.print());
+printSeparationBtn.addEventListener("click", printCompactSeparation);
 scanSubmitBtn.addEventListener("click", handleScan);
 scanFocusBtn.addEventListener("click", () => {
   scanInput.focus();
