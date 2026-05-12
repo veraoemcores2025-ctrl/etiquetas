@@ -6,6 +6,7 @@ const state = {
   limit: 200,
   labelRefs: [],
   shopeeOrders: [],
+  separationSource: "",
   expedition: (() => {
     try {
       return JSON.parse(localStorage.getItem("expeditionStatus") || "{}");
@@ -234,6 +235,12 @@ async function addZplFiles(files) {
 function clearZplFiles() {
   state.zplFiles = [];
   state.zpl = "";
+  if (state.separationSource === "zpl") {
+    state.shopeeOrders = [];
+    state.separationSource = "";
+    shopeeSheetName.textContent = "Nenhuma planilha selecionada";
+    renderShopeeSeparation();
+  }
   fileInput.value = "";
   updateZplFileSummary();
   resetZplOutputs();
@@ -245,7 +252,10 @@ function clearZplFiles() {
 
 function extractLabelRefs(label) {
   const orderIds = [...label.matchAll(/\b\d{6}[A-Z0-9]{6,}\b/g)].map(match => match[0]);
-  const trackingIds = [...label.matchAll(/\bBR[A-Z0-9]{10,18}\b/g)].map(match => match[0]);
+  const trackingIds = [
+    ...label.matchAll(/\bBR[A-Z0-9]{10,18}\b/g),
+    ...label.matchAll(/\b[A-Z]{2}\d{8,20}[A-Z0-9]{0,4}\b/g)
+  ].map(match => match[0]);
   const zplTexts = [...label.matchAll(/\^FD([\s\S]*?)\^FS/g)]
     .map(match => match[1].replace(/\^FH\\?/g, "").replace(/_/g, " ").trim())
     .filter(text => text && !/^(DESTINATARIO|REMETENTE|PEDIDO|CEP|BAIRRO)$/i.test(text));
@@ -257,8 +267,48 @@ function extractLabelRefs(label) {
   return {
     orderId: orderIds[0] || "",
     tracking: trackingIds[0] || "",
-    recipient: recipient || ""
+    recipient: recipient || "",
+    texts: zplTexts
   };
+}
+
+function createOrdersFromZplRefs(labelRefs) {
+  const orders = [];
+  const seen = new Set();
+
+  labelRefs.forEach((ref, index) => {
+    const code = ref.orderId || ref.tracking || `ZPL-${index + 1}`;
+    const key = normalizeCode(code);
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const city = (ref.texts || []).find(text =>
+      /^[A-Za-zÀ-ÿ ]{3,}(\/[A-Z]{2})?$/.test(text) &&
+      !/\b(DESTINATARIO|REMETENTE|SHOPEE|JADLOG|PEDIDO|CEP|BAIRRO)\b/i.test(text)
+    ) || "";
+
+    orders.push({
+      orderId: code,
+      tracking: ref.tracking || "",
+      username: "",
+      recipient: ref.recipient || `Etiqueta ${index + 1}`,
+      labelRecipient: ref.recipient || "",
+      address: "",
+      shipping: "Criado pelo ZPL",
+      city,
+      uf: "",
+      cep: "",
+      fromZplOnly: true,
+      zplLabelNumber: index + 1,
+      items: [{
+        product: "Etiqueta de envio importada por ZPL",
+        variation: "Sem planilha Shopee",
+        qty: 1
+      }]
+    });
+  });
+
+  return orders;
 }
 
 function normalizeHeader(value) {
@@ -561,7 +611,11 @@ function buildShopeeSeparationRows() {
 
   const rows = [
     ...matchedRows,
-    ...orders.filter(order => !used.has(order.orderId)).map(order => ({ order, labelNumber: "", matched: false }))
+    ...orders.filter(order => !used.has(order.orderId)).map(order => ({
+      order,
+      labelNumber: order.zplLabelNumber || "",
+      matched: Boolean(order.fromZplOnly)
+    }))
   ];
 
   return { orders, matchedRows, rows };
@@ -586,7 +640,7 @@ function renderShopeeSeparation() {
   updateScanCounters();
 
   if (!rows.length) {
-    shopeeRows.innerHTML = '<div class="empty-separation">Suba a planilha da Shopee para montar o mapa de separação.</div>';
+    shopeeRows.innerHTML = '<div class="empty-separation">Suba a planilha da Shopee ou um ZPL para montar o mapa de separação.</div>';
     return;
   }
 
@@ -1013,6 +1067,13 @@ async function analyze() {
     state.total = data.total;
     state.limit = data.limit;
     state.labelRefs = data.labelRefs;
+    if (state.separationSource !== "sheet") {
+      state.shopeeOrders = createOrdersFromZplRefs(data.labelRefs);
+      state.separationSource = state.shopeeOrders.length ? "zpl" : "";
+      shopeeSheetName.textContent = state.shopeeOrders.length
+        ? `Mapa criado pelo ZPL (${state.shopeeOrders.length} etiquetas)`
+        : "Nenhuma planilha selecionada";
+    }
     totalLabels.textContent = data.total;
     totalBatches.textContent = data.batches.length;
     rawBlocks.textContent = data.rawBlocks || data.total;
@@ -1226,6 +1287,7 @@ shopeeSheetInput.addEventListener("change", async () => {
     const orders = parseShopeeRows(rows);
 
     state.shopeeOrders = orders;
+    state.separationSource = "sheet";
     shopeeSheetName.textContent = `${file.name} (${orders.length} pedidos)`;
     renderShopeeSeparation();
   } catch (error) {
