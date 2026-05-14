@@ -75,6 +75,10 @@ const resultText = document.querySelector("#resultText");
 const resultLink = document.querySelector("#resultLink");
 const openDownloadsBtn = document.querySelector("#openDownloadsBtn");
 const compactPrintArea = document.querySelector("#compactPrintArea");
+const dashboardOrders = document.querySelector("#dashboardOrders");
+const dashboardLabels = document.querySelector("#dashboardLabels");
+const dashboardReady = document.querySelector("#dashboardReady");
+const dashboardQz = document.querySelector("#dashboardQz");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
@@ -91,6 +95,16 @@ function escapeHtml(value) {
 function showStatus(message) {
   statusText.textContent = message;
   if (!statusDialog.open) statusDialog.showModal();
+}
+
+function updateDashboard() {
+  const orders = state.shopeeOrders || [];
+  const qzReady = Boolean(window.qz && qz.websocket.isActive());
+
+  dashboardOrders.textContent = orders.length;
+  dashboardLabels.textContent = state.total || 0;
+  dashboardReady.textContent = orders.filter(order => order.items?.length && !order.fromZplOnly).length;
+  dashboardQz.textContent = qzReady ? "QZ" : "PDF";
 }
 
 function closeStatus() {
@@ -248,6 +262,7 @@ function clearZplFiles() {
   downloadAllBtn.disabled = true;
   printQzBtn.disabled = true;
   printPdfQzBtn.disabled = true;
+  updateDashboard();
 }
 
 function extractLabelRefs(label) {
@@ -641,6 +656,7 @@ function renderShopeeSeparation() {
   downloadSeparationPdfBtn.disabled = !orders.length;
   printSeparationBtn.disabled = !orders.length;
   updateScanCounters();
+  updateDashboard();
 
   if (!rows.length) {
     const zplWithoutReadableData = state.zpl && state.labelRefs.length && state.separationSource !== "sheet";
@@ -904,10 +920,12 @@ async function connectQz() {
     setQzStatus(`QZ conectado. Impressora encontrada: ${printer}`);
     printQzBtn.disabled = !state.zpl;
     printPdfQzBtn.disabled = !state.zpl;
+    updateDashboard();
   } catch (error) {
     printQzBtn.disabled = true;
     printPdfQzBtn.disabled = true;
     setQzStatus("QZ nao conectado. Instale/abra o QZ Tray e aceite a permissao.");
+    updateDashboard();
     showStatus(error.message || "Nao consegui conectar ao QZ Tray.");
   }
 }
@@ -1092,6 +1110,7 @@ async function analyze() {
     summary.hidden = false;
     renderBatches();
     renderShopeeSeparation();
+    updateDashboard();
     await previewZplFirstBatch();
   } catch (error) {
     showStatus(error.message);
@@ -1308,6 +1327,7 @@ shopeeSheetInput.addEventListener("change", async () => {
 
 setupEnvironment();
 updateZplFileSummary();
+updateDashboard();
 analyzeBtn.addEventListener("click", analyze);
 addMoreZplBtn.addEventListener("click", () => fileInput.click());
 clearZplFilesBtn.addEventListener("click", clearZplFiles);

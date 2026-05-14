@@ -18,10 +18,16 @@
         </div>
 
         <div class="nav-section">
+          <span>Gestão</span>
+          <a class="nav-item active" href="#dashboardPanel">Resumo</a>
+          <a class="nav-item" href="#wbuyPanel">Pedidos wBuy</a>
+          <a class="nav-item" href="#separationPanel">Expedição</a>
+        </div>
+
+        <div class="nav-section">
           <span>Operação</span>
-          <a class="nav-item active" href="#fileInput">Etiquetas</a>
+          <a class="nav-item" href="#fileInput">Etiquetas</a>
           <a class="nav-item" href="#shopeeSheetInput">Separação</a>
-          <a class="nav-item" href="#wbuyOrderId">Pedidos wBuy</a>
           <a class="nav-item" href="#labelPreviewPanel">Preview</a>
         </div>
 
@@ -41,12 +47,66 @@
         <header class="topbar">
           <div>
             <span class="eyebrow">Central de expedição</span>
-            <h1>Etiquetas ZPL em lotes</h1>
-            <p>Suba até 200 etiquetas da Shopee, wBuy ou transportadora e baixe um PDF 4x6 pronto para imprimir.</p>
+            <h1>Gestor de etiquetas e expedição</h1>
+            <p>Controle pedidos, separe produtos, gere etiquetas 4x6 e imprima pela POS-9200-L em um fluxo só.</p>
+          </div>
+          <div class="topbar-actions">
+            <a href="#wbuyPanel">Buscar pedido</a>
+            <a href="#separationPanel">Mapa de separação</a>
           </div>
         </header>
 
+        <section class="dashboard-panel" id="dashboardPanel" aria-label="Resumo da operação">
+          <div class="metric-card primary">
+            <span>Pedidos na tela</span>
+            <strong id="dashboardOrders">0</strong>
+            <small>wBuy, Shopee ou ZPL cruzado</small>
+          </div>
+          <div class="metric-card">
+            <span>Etiquetas carregadas</span>
+            <strong id="dashboardLabels">0</strong>
+            <small>Limite atual: 200 por arquivo</small>
+          </div>
+          <div class="metric-card">
+            <span>Prontas para separar</span>
+            <strong id="dashboardReady">0</strong>
+            <small>Com itens e cliente visíveis</small>
+          </div>
+          <div class="metric-card">
+            <span>Impressão</span>
+            <strong id="dashboardQz">PDF</strong>
+            <small>QZ Tray quando conectado</small>
+          </div>
+        </section>
+
+        <section class="module-strip" aria-label="Fluxo principal">
+          <a href="#wbuyPanel">
+            <strong>1. Pedidos</strong>
+            <span>Buscar wBuy e conferir dados do cliente.</span>
+          </a>
+          <a href="#fileInput">
+            <strong>2. Etiquetas</strong>
+            <span>Subir ZPL de uma ou várias pastas.</span>
+          </a>
+          <a href="#separationPanel">
+            <strong>3. Separação</strong>
+            <span>Mapa por pedido, item, cor e tamanho.</span>
+          </a>
+          <a href="#connectQzBtn">
+            <strong>4. Impressão</strong>
+            <span>PDF ou QZ Tray direto na térmica.</span>
+          </a>
+        </section>
+
         <section class="controls" aria-label="Configurações">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Etiquetas</span>
+              <h2>Gerar PDF ou lotes ZPL</h2>
+            </div>
+            <p>Use esta área para Shopee, transportadora ou arquivos ZPL exportados em lotes.</p>
+          </div>
+
           <label class="file-drop" for="fileInput">
             <span class="file-title">Escolher arquivos .txt ou .zpl</span>
             <span id="fileName">Nenhum arquivo selecionado</span>
@@ -165,7 +225,7 @@
           </div>
         </section>
 
-        <section class="qz-panel">
+        <section class="qz-panel" id="qzPanel">
           <div>
             <strong>Impressao direta com QZ Tray</strong>
             <p id="qzStatus">Instale e abra o QZ Tray no notebook para imprimir direto na LABEL.</p>
@@ -177,10 +237,10 @@
           </div>
         </section>
 
-        <section class="qz-panel">
+        <section class="qz-panel wbuy-panel" id="wbuyPanel">
           <div>
             <strong>Integração wBuy</strong>
-            <p id="wbuyStatus">Configure as variáveis na Vercel para buscar pedidos sem expor a chave no navegador.</p>
+            <p id="wbuyStatus">Busque pedidos, confira itens e gere etiqueta própria com preview antes de imprimir.</p>
           </div>
           <div class="qz-actions">
             <input id="wbuyOrderId" type="text" placeholder="Pedido wBuy, ex: 12357525">
