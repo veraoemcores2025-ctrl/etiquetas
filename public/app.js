@@ -79,6 +79,10 @@ const dashboardOrders = document.querySelector("#dashboardOrders");
 const dashboardLabels = document.querySelector("#dashboardLabels");
 const dashboardReady = document.querySelector("#dashboardReady");
 const dashboardQz = document.querySelector("#dashboardQz");
+const boardPendingCount = document.querySelector("#boardPendingCount");
+const boardSeparatedCount = document.querySelector("#boardSeparatedCount");
+const boardLabeledCount = document.querySelector("#boardLabeledCount");
+const boardShippedCount = document.querySelector("#boardShippedCount");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
@@ -100,11 +104,20 @@ function showStatus(message) {
 function updateDashboard() {
   const orders = state.shopeeOrders || [];
   const qzReady = Boolean(window.qz && qz.websocket.isActive());
+  const counts = orders.reduce((acc, order) => {
+    const status = getExpeditionEntry(order.orderId).status || "pendente";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
 
   dashboardOrders.textContent = orders.length;
   dashboardLabels.textContent = state.total || 0;
   dashboardReady.textContent = orders.filter(order => order.items?.length && !order.fromZplOnly).length;
   dashboardQz.textContent = qzReady ? "QZ" : "PDF";
+  boardPendingCount.textContent = counts.pendente || 0;
+  boardSeparatedCount.textContent = counts.separado || 0;
+  boardLabeledCount.textContent = counts.etiquetado || 0;
+  boardShippedCount.textContent = counts.despachado || 0;
 }
 
 function closeStatus() {

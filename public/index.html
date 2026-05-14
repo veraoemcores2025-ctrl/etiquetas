@@ -79,6 +79,75 @@
           </div>
         </section>
 
+        <section class="sales-console" aria-label="Painel de vendas e expedição">
+          <div class="console-head">
+            <div>
+              <span class="eyebrow">Vendas</span>
+              <h2>Pedidos em operação</h2>
+              <p>Organize o dia por status, confira pendências e avance os pedidos pela expedição.</p>
+            </div>
+            <div class="console-actions">
+              <a href="#wbuyPanel">Novo pedido wBuy</a>
+              <a href="#shopeeSheetInput">Importar Shopee</a>
+            </div>
+          </div>
+
+          <div class="console-tabs" aria-label="Filtros rápidos">
+            <button class="tab-active" type="button">Todos</button>
+            <button type="button">A separar</button>
+            <button type="button">Separados</button>
+            <button type="button">Etiquetados</button>
+            <button type="button">Despachados</button>
+          </div>
+
+          <div class="console-filterbar">
+            <label>
+              Buscar pedido
+              <input type="search" placeholder="Pedido, cliente, rastreio ou produto">
+            </label>
+            <label>
+              Canal
+              <select>
+                <option>Todos os canais</option>
+                <option>wBuy</option>
+                <option>Shopee</option>
+                <option>ZPL importado</option>
+              </select>
+            </label>
+            <label>
+              Ação rápida
+              <select>
+                <option>Conferir separação</option>
+                <option>Gerar etiquetas</option>
+                <option>Imprimir mapa</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="status-board" aria-label="Resumo por etapa">
+            <div class="status-lane lane-pending">
+              <span>A separar</span>
+              <strong id="boardPendingCount">0</strong>
+              <small>Pedidos aguardando coleta de itens.</small>
+            </div>
+            <div class="status-lane lane-separated">
+              <span>Separados</span>
+              <strong id="boardSeparatedCount">0</strong>
+              <small>Produtos separados e prontos para etiqueta.</small>
+            </div>
+            <div class="status-lane lane-labeled">
+              <span>Etiquetados</span>
+              <strong id="boardLabeledCount">0</strong>
+              <small>Etiquetas conferidas e aplicadas.</small>
+            </div>
+            <div class="status-lane lane-shipped">
+              <span>Despachados</span>
+              <strong id="boardShippedCount">0</strong>
+              <small>Pedidos finalizados para transporte.</small>
+            </div>
+          </div>
+        </section>
+
         <section class="module-strip" aria-label="Fluxo principal">
           <a href="#wbuyPanel">
             <strong>1. Pedidos</strong>

@@ -306,6 +306,143 @@ h1 {
   line-height: 1.35;
 }
 
+.sales-console {
+  padding: 22px 28px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.console-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.console-head h2 {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+.console-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.console-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.console-actions a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border: 1px solid #b8d8df;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.console-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 18px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.console-tabs button {
+  min-height: 38px;
+  color: #465766;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.console-tabs button:hover,
+.console-tabs .tab-active {
+  color: #fff;
+  background: var(--nav);
+  box-shadow: none;
+  transform: none;
+}
+
+.console-filterbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) minmax(160px, 0.8fr) minmax(170px, 0.8fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  background: #f7fafc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.status-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.status-lane {
+  min-height: 124px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--accent);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #ffffff, #f9fbfc);
+}
+
+.status-lane span,
+.status-lane small {
+  display: block;
+}
+
+.status-lane span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.status-lane strong {
+  display: block;
+  margin: 10px 0 8px;
+  color: var(--ink);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.status-lane small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.lane-pending {
+  border-top-color: #64748b;
+}
+
+.lane-separated {
+  border-top-color: #0f7a8a;
+}
+
+.lane-labeled {
+  border-top-color: #a16207;
+}
+
+.lane-shipped {
+  border-top-color: #16834a;
+}
+
 .topbar p,
 .side li,
 .notice p,
@@ -1193,7 +1330,8 @@ dialog::backdrop {
   }
 
   .dashboard-panel,
-  .module-strip {
+  .module-strip,
+  .status-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1214,6 +1352,7 @@ dialog::backdrop {
   .qz-panel,
   .result-panel,
   .separation-head,
+  .console-head,
   .topbar,
   .section-title {
     align-items: stretch;
@@ -1228,6 +1367,14 @@ dialog::backdrop {
   .section-title p {
     max-width: none;
     text-align: left;
+  }
+
+  .console-actions {
+    justify-content: flex-start;
+  }
+
+  .console-filterbar {
+    grid-template-columns: 1fr;
   }
 
   .sheet-upload {
@@ -1260,6 +1407,7 @@ dialog::backdrop {
   .app-nav,
   .topbar,
   .dashboard-panel,
+  .sales-console,
   .controls,
   .qz-panel,
   .result-panel,
@@ -1280,7 +1428,8 @@ dialog::backdrop {
   .separation-stats,
   .scan-status-grid,
   .dashboard-panel,
-  .module-strip {
+  .module-strip,
+  .status-board {
     grid-template-columns: 1fr;
   }
 
