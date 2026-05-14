@@ -4,6 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Impressor de etiquetas ZPL</title>
+    <script>
+      try {
+        const theme = localStorage.getItem("uiTheme") || "light";
+        document.documentElement.dataset.theme = theme;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link rel="stylesheet" href="/assets/styles.css">
   </head>
   <body>
@@ -51,6 +59,7 @@
             <p>Controle pedidos, separe produtos, gere etiquetas 4x6 e imprima pela POS-9200-L em um fluxo só.</p>
           </div>
           <div class="topbar-actions">
+            <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">Modo dark</button>
             <a href="#wbuy" data-view-target="wbuy">Buscar pedido</a>
             <a href="#separation" data-view-target="separation">Mapa de separação</a>
           </div>

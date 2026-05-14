@@ -83,11 +83,26 @@ const boardPendingCount = document.querySelector("#boardPendingCount");
 const boardSeparatedCount = document.querySelector("#boardSeparatedCount");
 const boardLabeledCount = document.querySelector("#boardLabeledCount");
 const boardShippedCount = document.querySelector("#boardShippedCount");
+const themeToggle = document.querySelector("#themeToggle");
 const viewPanels = document.querySelectorAll(".view-panel");
 const viewLinks = document.querySelectorAll("[data-view-target]");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
+
+function applyTheme(theme) {
+  const safeTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = safeTheme;
+  if (themeToggle) {
+    themeToggle.textContent = safeTheme === "dark" ? "Modo claro" : "Modo dark";
+    themeToggle.setAttribute("aria-pressed", String(safeTheme === "dark"));
+  }
+  try {
+    localStorage.setItem("uiTheme", safeTheme);
+  } catch {
+    // localStorage can be blocked in private windows.
+  }
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -1356,6 +1371,7 @@ shopeeSheetInput.addEventListener("change", async () => {
 setupEnvironment();
 updateZplFileSummary();
 updateDashboard();
+applyTheme(document.documentElement.dataset.theme || "light");
 activateView((window.location.hash || "#dashboard").replace("#", ""));
 analyzeBtn.addEventListener("click", analyze);
 addMoreZplBtn.addEventListener("click", () => fileInput.click());
@@ -1373,6 +1389,9 @@ downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", printCompactSeparation);
+themeToggle?.addEventListener("click", () => {
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+});
 viewLinks.forEach(link => {
   link.addEventListener("click", event => {
     const view = link.dataset.viewTarget;

@@ -27,6 +27,34 @@
   --radius: 8px;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111827;
+  --nav: #0f172a;
+  --nav-soft: #17323c;
+  --nav-text: #cbd5e1;
+  --surface: #172033;
+  --surface-soft: #111a2b;
+  --surface-strong: #1f2937;
+  --text: #e5edf5;
+  --muted: #9aa9b8;
+  --line: #29384b;
+  --line-strong: #3a4a61;
+  --accent: #19a0b6;
+  --accent-dark: #6ee7f2;
+  --accent-soft: #0f3240;
+  --blue: #60a5fa;
+  --blue-soft: #172a46;
+  --ink: #f8fafc;
+  --success: #123425;
+  --success-line: #1f6a49;
+  --warn: #b7791f;
+  --warn-dark: #d69e2e;
+  --warn-bg: #2f2411;
+  --danger: #fb923c;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.32);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -243,6 +271,13 @@ h1 {
   border-radius: var(--radius);
   text-decoration: none;
   font-weight: 800;
+}
+
+.theme-toggle {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text);
 }
 
 .dashboard-panel {
@@ -550,6 +585,17 @@ button:disabled {
 
 button.secondary {
   background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+button.theme-toggle {
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+button.theme-toggle:hover {
+  background: var(--nav-soft);
   color: var(--accent-dark);
 }
 
@@ -1244,6 +1290,97 @@ tbody tr:hover td {
   display: block;
   margin-bottom: 4px;
   font-size: 17px;
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .topbar-actions a,
+html[data-theme="dark"] .start-card,
+html[data-theme="dark"] .main-start,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .controls,
+html[data-theme="dark"] .qz-panel,
+html[data-theme="dark"] .qz-panel.wbuy-panel,
+html[data-theme="dark"] .separation-panel,
+html[data-theme="dark"] .separation-stats div,
+html[data-theme="dark"] .scan-panel,
+html[data-theme="dark"] .separation-card,
+html[data-theme="dark"] .preview-panel,
+html[data-theme="dark"] .preview-meta span,
+html[data-theme="dark"] .summary,
+html[data-theme="dark"] .table-section,
+html[data-theme="dark"] dialog {
+  background: var(--surface);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .app-nav,
+html[data-theme="dark"] .nav-card,
+html[data-theme="dark"] .file-drop,
+html[data-theme="dark"] .sheet-upload,
+html[data-theme="dark"] .item-list li,
+html[data-theme="dark"] .pick-item,
+html[data-theme="dark"] .status-lane {
+  background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .nav-section > span {
+  color: #7d8fa3;
+}
+
+html[data-theme="dark"] .brand,
+html[data-theme="dark"] .app-nav,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .controls,
+html[data-theme="dark"] .qz-panel,
+html[data-theme="dark"] .separation-panel,
+html[data-theme="dark"] .preview-panel,
+html[data-theme="dark"] .summary,
+html[data-theme="dark"] .table-section {
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select {
+  background: #0f172a;
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+html[data-theme="dark"] th {
+  background: #111a2b;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] tbody tr:hover td,
+html[data-theme="dark"] .start-card:hover,
+html[data-theme="dark"] .file-drop:hover {
+  background: #1a2538;
+}
+
+html[data-theme="dark"] .preview-stage {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .preview-device {
+  background: #0b1220;
+  border-color: #020617;
+}
+
+html[data-theme="dark"] .preview-device-bar {
+  background: #020617;
+  color: #dbeafe;
+}
+
+html[data-theme="dark"] .result-panel,
+html[data-theme="dark"] .good {
+  background: var(--success);
+  border-color: var(--success-line);
+}
+
+html[data-theme="dark"] .notice,
+html[data-theme="dark"] .privacy-note {
+  background: var(--warn-bg);
+  border-color: #6b4b18;
 }
 
 dialog {
