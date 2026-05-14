@@ -19,22 +19,22 @@
 
         <div class="nav-section">
           <span>Gestão</span>
-          <a class="nav-item active" href="#dashboardPanel">Resumo</a>
-          <a class="nav-item" href="#wbuyPanel">Pedidos wBuy</a>
-          <a class="nav-item" href="#separationPanel">Expedição</a>
+          <a class="nav-item active" href="#dashboard" data-view-target="dashboard">Dashboard</a>
+          <a class="nav-item" href="#wbuy" data-view-target="wbuy">Pedidos wBuy</a>
+          <a class="nav-item" href="#separation" data-view-target="separation">Expedição</a>
         </div>
 
         <div class="nav-section">
           <span>Operação</span>
-          <a class="nav-item" href="#fileInput">Etiquetas</a>
-          <a class="nav-item" href="#shopeeSheetInput">Separação</a>
-          <a class="nav-item" href="#labelPreviewPanel">Preview</a>
+          <a class="nav-item" href="#labels" data-view-target="labels">Etiquetas</a>
+          <a class="nav-item" href="#separation" data-view-target="separation">Separação</a>
+          <a class="nav-item" href="#preview" data-view-target="preview">Preview</a>
         </div>
 
         <div class="nav-section">
           <span>Impressão</span>
-          <a class="nav-item" href="#connectQzBtn">QZ Tray</a>
-          <a class="nav-item" href="#batchRows">Lotes ZPL</a>
+          <a class="nav-item" href="#print" data-view-target="print">QZ Tray</a>
+          <a class="nav-item" href="#labels" data-view-target="labels">Lotes ZPL</a>
         </div>
 
         <div class="nav-card">
@@ -51,31 +51,57 @@
             <p>Controle pedidos, separe produtos, gere etiquetas 4x6 e imprima pela POS-9200-L em um fluxo só.</p>
           </div>
           <div class="topbar-actions">
-            <a href="#wbuyPanel">Buscar pedido</a>
-            <a href="#separationPanel">Mapa de separação</a>
+            <a href="#wbuy" data-view-target="wbuy">Buscar pedido</a>
+            <a href="#separation" data-view-target="separation">Mapa de separação</a>
           </div>
         </header>
 
-        <section class="dashboard-panel" id="dashboardPanel" aria-label="Resumo da operação">
-          <div class="metric-card">
-            <span>Pedidos na tela</span>
-            <strong id="dashboardOrders">0</strong>
-          </div>
-          <div class="metric-card">
-            <span>Etiquetas</span>
-            <strong id="dashboardLabels">0</strong>
-          </div>
-          <div class="metric-card">
-            <span>Prontas</span>
-            <strong id="dashboardReady">0</strong>
-          </div>
-          <div class="metric-card">
-            <span>Impressão</span>
-            <strong id="dashboardQz">PDF</strong>
-          </div>
+        <section class="view-panel is-active" data-view="dashboard" id="dashboard">
+          <section class="dashboard-panel" id="dashboardPanel" aria-label="Resumo da operação">
+            <div class="metric-card">
+              <span>Pedidos na tela</span>
+              <strong id="dashboardOrders">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Etiquetas</span>
+              <strong id="dashboardLabels">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Prontas</span>
+              <strong id="dashboardReady">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Impressão</span>
+              <strong id="dashboardQz">PDF</strong>
+            </div>
+          </section>
+
+          <section class="dashboard-start" aria-label="Ações principais">
+            <div class="start-card main-start">
+              <span class="eyebrow">Começar agora</span>
+              <h2>O que você quer fazer?</h2>
+              <p>Escolha uma área na lateral ou use um dos atalhos abaixo para trabalhar sem confusão.</p>
+            </div>
+            <a class="start-card" href="#labels" data-view-target="labels">
+              <strong>Subir etiquetas</strong>
+              <span>Juntar ZPL, gerar PDF e baixar lotes.</span>
+            </a>
+            <a class="start-card" href="#separation" data-view-target="separation">
+              <strong>Separar pedidos</strong>
+              <span>Usar planilha Shopee, leitor e mapa de itens.</span>
+            </a>
+            <a class="start-card" href="#wbuy" data-view-target="wbuy">
+              <strong>Buscar wBuy</strong>
+              <span>Conferir pedido e gerar etiqueta própria.</span>
+            </a>
+            <a class="start-card" href="#print" data-view-target="print">
+              <strong>Imprimir direto</strong>
+              <span>Conectar QZ Tray e mandar para a POS-9200-L.</span>
+            </a>
+          </section>
         </section>
 
-        <section class="controls" aria-label="Configurações">
+        <section class="controls view-panel" data-view="labels" id="labels" aria-label="Configurações">
           <div class="section-title">
             <div>
               <span class="eyebrow">Etiquetas</span>
@@ -125,7 +151,53 @@
           </div>
         </section>
 
-        <section class="separation-panel" id="separationPanel">
+        <section class="summary view-panel" data-view="labels" id="summary" hidden>
+          <div>
+            <span class="stat-label">Total</span>
+            <strong id="totalLabels">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Lotes</span>
+            <strong id="totalBatches">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Blocos ZPL</span>
+            <strong id="rawBlocks">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">Recomendação</span>
+            <strong id="recommendation">10 por vez</strong>
+          </div>
+        </section>
+
+        <section class="result-panel view-panel" data-view="labels" id="resultPanel" hidden>
+          <div>
+            <strong>PDF pronto</strong>
+            <p id="resultText">Arquivo gerado no formato 100 x 150 mm.</p>
+          </div>
+          <a id="resultLink" href="#" download>Baixar novamente</a>
+          <button id="openDownloadsBtn" type="button" hidden>Abrir Downloads</button>
+        </section>
+
+        <section class="table-section view-panel" data-view="labels" aria-label="Lotes gerados">
+          <table>
+            <thead>
+              <tr>
+                <th>Lote</th>
+                <th>Etiquetas</th>
+                <th>Tamanho</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="batchRows">
+              <tr class="empty-row">
+                <td colspan="4">Escolha o arquivo para gerar os lotes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="separation-panel view-panel" data-view="separation" id="separation">
           <div class="separation-head">
             <div>
               <span class="eyebrow">Separação Shopee</span>
@@ -221,7 +293,7 @@
           </div>
         </section>
 
-        <section class="qz-panel" id="qzPanel">
+        <section class="qz-panel view-panel" data-view="print" id="print">
           <div>
             <strong>Impressao direta com QZ Tray</strong>
             <p id="qzStatus">Instale e abra o QZ Tray no notebook para imprimir direto na LABEL.</p>
@@ -233,7 +305,7 @@
           </div>
         </section>
 
-        <section class="qz-panel wbuy-panel" id="wbuyPanel">
+        <section class="qz-panel wbuy-panel view-panel" data-view="wbuy" id="wbuy">
           <div>
             <strong>Integração wBuy</strong>
             <p id="wbuyStatus">Busque pedidos, confira itens e gere etiqueta própria com preview antes de imprimir.</p>
@@ -247,14 +319,14 @@
           </div>
         </section>
 
-        <section class="result-panel" id="wbuyResultPanel" hidden>
+        <section class="result-panel view-panel" data-view="wbuy" id="wbuyResultPanel" hidden>
           <div>
             <strong>Pedido wBuy</strong>
             <p id="wbuyResultText">Dados recebidos da API.</p>
           </div>
         </section>
 
-        <section class="preview-panel" id="labelPreviewPanel" hidden>
+        <section class="preview-panel view-panel" data-view="preview" id="labelPreviewPanel" hidden>
           <div class="preview-header">
             <div>
               <span class="preview-kicker">Conferência antes da impressão</span>
@@ -278,51 +350,6 @@
           </div>
         </section>
 
-        <section class="summary" id="summary" hidden>
-          <div>
-            <span class="stat-label">Total</span>
-            <strong id="totalLabels">0</strong>
-          </div>
-          <div>
-            <span class="stat-label">Lotes</span>
-            <strong id="totalBatches">0</strong>
-          </div>
-          <div>
-            <span class="stat-label">Blocos ZPL</span>
-            <strong id="rawBlocks">0</strong>
-          </div>
-          <div>
-            <span class="stat-label">Recomendação</span>
-            <strong id="recommendation">10 por vez</strong>
-          </div>
-        </section>
-
-        <section class="result-panel" id="resultPanel" hidden>
-          <div>
-            <strong>PDF pronto</strong>
-            <p id="resultText">Arquivo gerado no formato 100 x 150 mm.</p>
-          </div>
-          <a id="resultLink" href="#" download>Baixar novamente</a>
-          <button id="openDownloadsBtn" type="button" hidden>Abrir Downloads</button>
-        </section>
-
-        <section class="table-section" aria-label="Lotes gerados">
-          <table>
-            <thead>
-              <tr>
-                <th>Lote</th>
-                <th>Etiquetas</th>
-                <th>Tamanho</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="batchRows">
-              <tr class="empty-row">
-                <td colspan="4">Escolha o arquivo para gerar os lotes.</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
         <section id="compactPrintArea" class="compact-print-area" aria-hidden="true"></section>
       </section>
 

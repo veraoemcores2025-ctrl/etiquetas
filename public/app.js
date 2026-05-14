@@ -83,6 +83,8 @@ const boardPendingCount = document.querySelector("#boardPendingCount");
 const boardSeparatedCount = document.querySelector("#boardSeparatedCount");
 const boardLabeledCount = document.querySelector("#boardLabeledCount");
 const boardShippedCount = document.querySelector("#boardShippedCount");
+const viewPanels = document.querySelectorAll(".view-panel");
+const viewLinks = document.querySelectorAll("[data-view-target]");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
@@ -99,6 +101,19 @@ function escapeHtml(value) {
 function showStatus(message) {
   statusText.textContent = message;
   if (!statusDialog.open) statusDialog.showModal();
+}
+
+function activateView(view) {
+  const requestedView = view || "dashboard";
+  const nextView = document.querySelector(`.view-panel[data-view="${CSS.escape(requestedView)}"]`)
+    ? requestedView
+    : "dashboard";
+  viewPanels.forEach(panel => {
+    panel.classList.toggle("is-active", panel.dataset.view === nextView);
+  });
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.classList.toggle("active", item.dataset.viewTarget === nextView);
+  });
 }
 
 function updateDashboard() {
@@ -1341,6 +1356,7 @@ shopeeSheetInput.addEventListener("change", async () => {
 setupEnvironment();
 updateZplFileSummary();
 updateDashboard();
+activateView((window.location.hash || "#dashboard").replace("#", ""));
 analyzeBtn.addEventListener("click", analyze);
 addMoreZplBtn.addEventListener("click", () => fileInput.click());
 clearZplFilesBtn.addEventListener("click", clearZplFiles);
@@ -1357,6 +1373,18 @@ downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", printCompactSeparation);
+viewLinks.forEach(link => {
+  link.addEventListener("click", event => {
+    const view = link.dataset.viewTarget;
+    if (!view) return;
+    event.preventDefault();
+    activateView(view);
+    history.replaceState(null, "", `#${view}`);
+  });
+});
+window.addEventListener("hashchange", () => {
+  activateView((window.location.hash || "#dashboard").replace("#", ""));
+});
 scanSubmitBtn.addEventListener("click", handleScan);
 scanFocusBtn.addEventListener("click", () => {
   scanInput.focus();

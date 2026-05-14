@@ -167,6 +167,27 @@ select {
   overflow: hidden;
 }
 
+.view-panel {
+  display: none;
+}
+
+.view-panel.is-active {
+  display: block;
+}
+
+.summary.view-panel.is-active {
+  display: grid;
+}
+
+.result-panel.view-panel.is-active,
+.qz-panel.view-panel.is-active {
+  display: flex;
+}
+
+.preview-panel.view-panel.is-active {
+  display: block;
+}
+
 .topbar {
   display: flex;
   align-items: flex-start;
@@ -230,6 +251,57 @@ h1 {
   padding: 14px 28px;
   background: #f7fafc;
   border-bottom: 1px solid var(--line);
+}
+
+.dashboard-start {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 22px 28px 28px;
+  background: #fff;
+}
+
+.start-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 132px;
+  padding: 18px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(18, 32, 43, 0.04);
+}
+
+.start-card:hover {
+  border-color: #b8d8df;
+  background: #f8fcfd;
+}
+
+.start-card strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.start-card span,
+.start-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.main-start {
+  grid-row: span 2;
+  background:
+    linear-gradient(135deg, rgba(15, 122, 138, 0.1), transparent 70%),
+    #fff;
+}
+
+.main-start h2 {
+  margin: 0;
+  font-size: 26px;
 }
 
 .metric-card {
@@ -1207,8 +1279,13 @@ dialog::backdrop {
   }
 
   .dashboard-panel,
+  .dashboard-start,
   .status-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .main-start {
+    grid-row: auto;
   }
 }
 
@@ -1294,6 +1371,7 @@ dialog::backdrop {
   .separation-stats,
   .scan-status-grid,
   .dashboard-panel,
+  .dashboard-start,
   .status-board {
     grid-template-columns: 1fr;
   }
