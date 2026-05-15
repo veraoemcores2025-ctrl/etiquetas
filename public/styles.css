@@ -282,7 +282,7 @@ h1 {
 
 .dashboard-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   padding: 20px 28px 12px;
   background: transparent;
@@ -646,6 +646,84 @@ button.warning:hover {
   border: 1px solid var(--success-line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+.print-history {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  margin: 16px 28px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.print-history strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 18px;
+}
+
+.print-history p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.history-actions {
+  display: flex;
+  align-items: center;
+}
+
+.history-list {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.history-list span {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.history-list strong {
+  margin: 0;
+  font-size: 13px;
+}
+
+.history-list small {
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.history-badge,
+.history-ok {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.history-badge {
+  color: #7a2e0e;
+  background: #fff1ea;
+  border: 1px solid #f4b08c;
+}
+
+.history-ok {
+  color: #17633d;
+  background: #eaf8f1;
+  border: 1px solid #b7e0cc;
 }
 
 .separation-panel {
@@ -1307,6 +1385,7 @@ html[data-theme="dark"] .separation-card,
 html[data-theme="dark"] .preview-panel,
 html[data-theme="dark"] .preview-meta span,
 html[data-theme="dark"] .summary,
+html[data-theme="dark"] .print-history,
 html[data-theme="dark"] .table-section,
 html[data-theme="dark"] dialog {
   background: var(--surface);
@@ -1318,6 +1397,7 @@ html[data-theme="dark"] .nav-card,
 html[data-theme="dark"] .file-drop,
 html[data-theme="dark"] .sheet-upload,
 html[data-theme="dark"] .item-list li,
+html[data-theme="dark"] .history-list span,
 html[data-theme="dark"] .pick-item,
 html[data-theme="dark"] .status-lane {
   background: var(--surface-soft);
@@ -1335,6 +1415,7 @@ html[data-theme="dark"] .qz-panel,
 html[data-theme="dark"] .separation-panel,
 html[data-theme="dark"] .preview-panel,
 html[data-theme="dark"] .summary,
+html[data-theme="dark"] .print-history,
 html[data-theme="dark"] .table-section {
   border-color: var(--line);
 }
@@ -1381,6 +1462,18 @@ html[data-theme="dark"] .notice,
 html[data-theme="dark"] .privacy-note {
   background: var(--warn-bg);
   border-color: #6b4b18;
+}
+
+html[data-theme="dark"] .history-badge {
+  color: #fdba74;
+  background: #351d12;
+  border-color: #7c3f1d;
+}
+
+html[data-theme="dark"] .history-ok {
+  color: #86efac;
+  background: #123425;
+  border-color: #1f6a49;
 }
 
 dialog {
@@ -1506,6 +1599,7 @@ dialog::backdrop {
   .result-panel,
   .preview-panel,
   .summary,
+  .print-history,
   .separation-panel,
   .table-section {
     margin-left: 12px;
@@ -1532,6 +1626,7 @@ dialog::backdrop {
 
   .field-grid,
   .summary,
+  .print-history,
   .separation-stats,
   .scan-status-grid,
   .dashboard-panel,
@@ -1757,6 +1852,7 @@ dialog::backdrop {
   .qz-panel,
   .preview-panel,
   .summary,
+  .print-history,
   .result-panel,
   .table-section,
   .separation-head,

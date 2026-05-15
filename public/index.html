@@ -83,6 +83,10 @@
               <span>Impressão</span>
               <strong id="dashboardQz">PDF</strong>
             </div>
+            <div class="metric-card">
+              <span>Histórico 7 dias</span>
+              <strong id="dashboardHistory">0</strong>
+            </div>
           </section>
 
           <section class="dashboard-start" aria-label="Ações principais">
@@ -177,6 +181,18 @@
             <span class="stat-label">Recomendação</span>
             <strong id="recommendation">10 por vez</strong>
           </div>
+        </section>
+
+        <section class="print-history view-panel" data-view="labels" id="printHistoryPanel">
+          <div>
+            <span class="eyebrow">Controle anti-repetição</span>
+            <strong id="historyTitle">Histórico de impressão vazio</strong>
+            <p id="historyText">Quando você gerar PDF ou imprimir pela plataforma, as etiquetas ficam marcadas por 7 dias.</p>
+          </div>
+          <div class="history-actions">
+            <button id="clearHistoryBtn" class="secondary" type="button">Limpar histórico</button>
+          </div>
+          <div id="historyList" class="history-list" hidden></div>
         </section>
 
         <section class="result-panel view-panel" data-view="labels" id="resultPanel" hidden>

@@ -7,6 +7,7 @@ const state = {
   labelRefs: [],
   shopeeOrders: [],
   separationSource: "",
+  printHistory: {},
   expedition: (() => {
     try {
       return JSON.parse(localStorage.getItem("expeditionStatus") || "{}");
@@ -79,16 +80,24 @@ const dashboardOrders = document.querySelector("#dashboardOrders");
 const dashboardLabels = document.querySelector("#dashboardLabels");
 const dashboardReady = document.querySelector("#dashboardReady");
 const dashboardQz = document.querySelector("#dashboardQz");
+const dashboardHistory = document.querySelector("#dashboardHistory");
 const boardPendingCount = document.querySelector("#boardPendingCount");
 const boardSeparatedCount = document.querySelector("#boardSeparatedCount");
 const boardLabeledCount = document.querySelector("#boardLabeledCount");
 const boardShippedCount = document.querySelector("#boardShippedCount");
 const themeToggle = document.querySelector("#themeToggle");
+const printHistoryPanel = document.querySelector("#printHistoryPanel");
+const historyTitle = document.querySelector("#historyTitle");
+const historyText = document.querySelector("#historyText");
+const historyList = document.querySelector("#historyList");
+const clearHistoryBtn = document.querySelector("#clearHistoryBtn");
 const viewPanels = document.querySelectorAll(".view-panel");
 const viewLinks = document.querySelectorAll("[data-view-target]");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
+const PRINT_HISTORY_KEY = "printHistoryV1";
+const PRINT_HISTORY_TTL = 7 * 24 * 60 * 60 * 1000;
 
 function applyTheme(theme) {
   const safeTheme = theme === "dark" ? "dark" : "light";
@@ -102,6 +111,139 @@ function applyTheme(theme) {
   } catch {
     // localStorage can be blocked in private windows.
   }
+}
+
+function loadPrintHistory() {
+  try {
+    state.printHistory = JSON.parse(localStorage.getItem(PRINT_HISTORY_KEY) || "{}");
+  } catch {
+    state.printHistory = {};
+  }
+  prunePrintHistory();
+}
+
+function savePrintHistory() {
+  localStorage.setItem(PRINT_HISTORY_KEY, JSON.stringify(state.printHistory));
+}
+
+function prunePrintHistory() {
+  const cutoff = Date.now() - PRINT_HISTORY_TTL;
+  let changed = false;
+  Object.entries(state.printHistory || {}).forEach(([key, item]) => {
+    if (!item?.printedAt || new Date(item.printedAt).getTime() < cutoff) {
+      delete state.printHistory[key];
+      changed = true;
+    }
+  });
+  if (changed) savePrintHistory();
+}
+
+function simpleHash(value) {
+  let hash = 2166136261;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36).toUpperCase();
+}
+
+function labelHistoryKey(ref) {
+  const value = ref?.orderId || ref?.tracking || ref?.recipient || ref?.fingerprint || "";
+  return normalizeCode(value);
+}
+
+function labelHistoryLabel(ref) {
+  return ref?.orderId || ref?.tracking || ref?.recipient || `Etiqueta ${ref?.labelNumber || ""}`.trim();
+}
+
+function refsForBatch(batchIndex) {
+  const batch = state.batches.find(item => item.index === batchIndex);
+  if (!batch) return [];
+  return state.labelRefs.slice(batch.start - 1, batch.end);
+}
+
+function getDuplicateRefs(refs = state.labelRefs) {
+  prunePrintHistory();
+  return refs.filter(ref => {
+    const key = labelHistoryKey(ref);
+    return key && state.printHistory[key];
+  });
+}
+
+function registerPrintedRefs(refs, source) {
+  const printedAt = new Date().toISOString();
+  refs.forEach(ref => {
+    const key = labelHistoryKey(ref);
+    if (!key) return;
+    state.printHistory[key] = {
+      label: labelHistoryLabel(ref),
+      source,
+      printedAt
+    };
+  });
+  savePrintHistory();
+  updateHistoryPanel();
+  updateDashboard();
+}
+
+function describeDuplicateRefs(refs) {
+  return refs.slice(0, 8).map(ref => {
+    const item = state.printHistory[labelHistoryKey(ref)];
+    const date = item?.printedAt ? new Date(item.printedAt).toLocaleString("pt-BR") : "";
+    return `${labelHistoryLabel(ref)}${date ? ` (${date})` : ""}`;
+  }).join(", ");
+}
+
+function canPrintRefs(refs, actionName) {
+  const duplicates = getDuplicateRefs(refs);
+  if (!duplicates.length) return true;
+  showStatus(
+    `Atenção: ${duplicates.length} etiqueta(s) já foram impressas nos últimos 7 dias: ${describeDuplicateRefs(duplicates)}. Para ${actionName}, limpe o histórico primeiro.`
+  );
+  return false;
+}
+
+function updateHistoryPanel() {
+  prunePrintHistory();
+  const entries = Object.values(state.printHistory || {})
+    .sort((a, b) => new Date(b.printedAt) - new Date(a.printedAt));
+  const currentDuplicates = getDuplicateRefs();
+
+  dashboardHistory.textContent = entries.length;
+  historyTitle.textContent = currentDuplicates.length
+    ? `${currentDuplicates.length} etiqueta(s) deste arquivo já foram impressas`
+    : entries.length
+      ? `${entries.length} etiqueta(s) no histórico`
+      : "Histórico de impressão vazio";
+  historyText.textContent = currentDuplicates.length
+    ? "A plataforma bloqueia PDF/impressão repetida para estas etiquetas. O histórico expira automaticamente em 7 dias."
+    : "Quando você gerar PDF ou imprimir pela plataforma, as etiquetas ficam marcadas por 7 dias.";
+  historyList.hidden = !entries.length;
+  historyList.innerHTML = entries.slice(0, 12).map(item => `
+    <span>
+      <strong>${escapeHtml(item.label || "Etiqueta")}</strong>
+      <small>${escapeHtml(item.source || "impressão")} - ${escapeHtml(new Date(item.printedAt).toLocaleString("pt-BR"))}</small>
+    </span>
+  `).join("");
+}
+
+function clearPrintHistory() {
+  state.printHistory = {};
+  savePrintHistory();
+  updateHistoryPanel();
+  renderBatches();
+  showStatus("Histórico de impressão limpo. Agora você pode gerar ou imprimir novamente.");
+}
+
+function wbuyHistoryRef() {
+  return {
+    orderId: currentWbuyOrderId,
+    tracking: "",
+    recipient: `wBuy ${currentWbuyOrderId}`,
+    fingerprint: simpleHash(`wbuy:${currentWbuyOrderId}`),
+    labelNumber: 1
+  };
 }
 
 function escapeHtml(value) {
@@ -250,6 +392,7 @@ function resetZplOutputs() {
   summary.hidden = true;
   resultPanel.hidden = true;
   labelPreviewPanel.hidden = true;
+  updateHistoryPanel();
   renderBatches();
 }
 
@@ -978,6 +1121,7 @@ async function printWithQz() {
     showStatus("Escolha um arquivo ZPL/TXT primeiro.");
     return;
   }
+  if (!canPrintRefs(state.labelRefs, "imprimir direto")) return;
 
   try {
     await connectQz();
@@ -995,6 +1139,7 @@ async function printWithQz() {
     }]);
 
     setQzStatus(`ZPL enviado para ${printer}.`);
+    registerPrintedRefs(state.labelRefs, "QZ ZPL direto");
     showStatus("Arquivo enviado para a impressora pelo QZ Tray.");
   } catch (error) {
     setQzStatus("Falha ao imprimir pelo QZ Tray. Use o PDF 4x6 como fallback.");
@@ -1040,6 +1185,7 @@ async function printPdfWithQz() {
     showStatus("Escolha um arquivo ZPL/TXT primeiro.");
     return;
   }
+  if (!canPrintRefs(state.labelRefs, "imprimir PDF via QZ")) return;
 
   try {
     await connectQz();
@@ -1051,6 +1197,7 @@ async function printPdfWithQz() {
     const pdfBuffer = await response.arrayBuffer();
     setQzStatus(`Enviando PDF para ${printer}...`);
     await printPdfBufferWithQz(pdfBuffer, `PDF enviado para ${printer}.`);
+    registerPrintedRefs(state.labelRefs, "QZ PDF");
     showStatus("PDF enviado para a impressora pelo QZ Tray.");
   } catch (error) {
     setQzStatus("Falha ao imprimir PDF pelo QZ. Use Baixar PDF completo 4x6.");
@@ -1089,7 +1236,11 @@ function analyzeZplLocally(zpl, requestedBatchSize) {
     total: labels.length,
     rawBlocks: raw.length,
     limit: maxLabels,
-    labelRefs: labels.map(extractLabelRefs),
+    labelRefs: labels.map((label, index) => ({
+      ...extractLabelRefs(label),
+      fingerprint: simpleHash(label),
+      labelNumber: index + 1
+    })),
     batches
   };
 }
@@ -1110,10 +1261,15 @@ function renderBatches() {
   downloadFullPdfBtn.disabled = false;
   printQzBtn.disabled = !window.qz || !qz.websocket.isActive();
   printPdfQzBtn.disabled = !window.qz || !qz.websocket.isActive();
-  batchRows.innerHTML = state.batches.map(batch => `
+  batchRows.innerHTML = state.batches.map(batch => {
+    const duplicateCount = getDuplicateRefs(refsForBatch(batch.index)).length;
+    const duplicateBadge = duplicateCount
+      ? `<span class="history-badge">Já impressas: ${duplicateCount}</span>`
+      : '<span class="history-ok">Sem repetidas</span>';
+    return `
     <tr>
       <td><strong>${batch.index}</strong></td>
-      <td>${batch.start} a ${batch.end} (${batch.count})</td>
+      <td>${batch.start} a ${batch.end} (${batch.count})<br>${duplicateBadge}</td>
       <td>${Math.ceil(batch.bytes / 1024)} KB</td>
       <td>
         <div class="row-actions">
@@ -1122,7 +1278,8 @@ function renderBatches() {
         </div>
       </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 }
 
 async function analyze() {
@@ -1153,6 +1310,7 @@ async function analyze() {
     summary.hidden = false;
     renderBatches();
     renderShopeeSeparation();
+    updateHistoryPanel();
     updateDashboard();
     await previewZplFirstBatch();
   } catch (error) {
@@ -1161,6 +1319,8 @@ async function analyze() {
 }
 
 async function downloadBatch(index, type) {
+  const batchRefs = refsForBatch(index);
+  if (type === "pdf" && !canPrintRefs(batchRefs, "baixar o PDF deste lote")) return;
   const endpoint = type === "pdf" ? (isLocalhost ? "/api/pdf" : "/api/pdf-batch") : "/api/batch";
   showStatus(type === "pdf" ? "Gerando PDF do lote..." : "Gerando arquivo ZPL do lote...");
   try {
@@ -1170,6 +1330,7 @@ async function downloadBatch(index, type) {
     const ext = type === "pdf" ? "pdf" : "zpl";
     const url = downloadBlob(blob, `etiquetas_lote_${index}_${batch.start}-${batch.end}.${ext}`, type === "pdf");
     if (type === "pdf") showLabelPreview(url);
+    if (type === "pdf") registerPrintedRefs(batchRefs, `PDF lote ${index}`);
     closeStatus();
   } catch (error) {
     showStatus(error.message);
@@ -1184,6 +1345,7 @@ async function downloadAllZpl() {
 
 async function downloadFullPdf() {
   if (!state.zpl) return;
+  if (!canPrintRefs(state.labelRefs, "baixar o PDF completo")) return;
 
   showStatus(isLocalhost ? "Gerando PDF e salvando na pasta Downloads..." : "Gerando PDF para download...");
   try {
@@ -1192,6 +1354,7 @@ async function downloadFullPdf() {
       const data = await response.json();
       showPdfResult(data.url, data.filename, data.total, data.localPath);
       showLabelPreview(data.url);
+      registerPrintedRefs(state.labelRefs, "PDF completo");
       showStatus(`PDF salvo em Downloads: ${data.filename}`);
       return;
     }
@@ -1202,6 +1365,7 @@ async function downloadFullPdf() {
     const url = downloadBlob(blob, filename, true);
     showPdfResult(url, filename, state.total);
     showLabelPreview(url);
+    registerPrintedRefs(state.labelRefs, "PDF completo");
     showStatus("PDF pronto. Se o download nao iniciou, clique em Baixar novamente na faixa verde.");
   } catch (error) {
     const message = error.name === "AbortError" ? "A geracao demorou demais. Tente baixar por lotes menores." : error.message;
@@ -1277,6 +1441,8 @@ async function downloadWbuyLabel() {
     showStatus("Busque um pedido wBuy primeiro.");
     return;
   }
+  const wbuyRef = wbuyHistoryRef();
+  if (!canPrintRefs([wbuyRef], "baixar a etiqueta wBuy")) return;
 
   try {
     showStatus("Gerando etiqueta wBuy 100 x 150 mm...");
@@ -1292,6 +1458,7 @@ async function downloadWbuyLabel() {
     const url = downloadBlob(blob, filename, true);
     showPdfResult(url, filename, 1);
     showLabelPreview(url);
+    registerPrintedRefs([wbuyRef], "PDF wBuy");
     showStatus("Etiqueta wBuy pronta. Se o download nao iniciou, clique em Baixar novamente.");
   } catch (error) {
     showStatus(error.message);
@@ -1322,6 +1489,8 @@ async function printWbuyLabel() {
     showStatus("Busque um pedido wBuy primeiro.");
     return;
   }
+  const wbuyRef = wbuyHistoryRef();
+  if (!canPrintRefs([wbuyRef], "imprimir a etiqueta wBuy")) return;
 
   try {
     showStatus("Gerando e enviando etiqueta wBuy para a impressora...");
@@ -1333,6 +1502,7 @@ async function printWbuyLabel() {
     }
 
     await printPdfBufferWithQz(await response.arrayBuffer(), "Etiqueta wBuy enviada para a impressora.");
+    registerPrintedRefs([wbuyRef], "QZ wBuy");
     showStatus("Etiqueta wBuy enviada para a impressora pelo QZ Tray.");
   } catch (error) {
     showStatus(error.message || "Nao consegui imprimir a etiqueta wBuy.");
@@ -1369,8 +1539,10 @@ shopeeSheetInput.addEventListener("change", async () => {
 });
 
 setupEnvironment();
+loadPrintHistory();
 updateZplFileSummary();
 updateDashboard();
+updateHistoryPanel();
 applyTheme(document.documentElement.dataset.theme || "light");
 activateView((window.location.hash || "#dashboard").replace("#", ""));
 analyzeBtn.addEventListener("click", analyze);
@@ -1389,6 +1561,7 @@ downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", printCompactSeparation);
+clearHistoryBtn.addEventListener("click", clearPrintHistory);
 themeToggle?.addEventListener("click", () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });
