@@ -379,12 +379,13 @@ function formatPdfFile(file) {
 }
 
 function updateComboState() {
-  const hasBothFiles = Boolean(state.combo.label?.bytes && state.combo.doc?.bytes);
+  const hasLabel = Boolean(state.combo.label?.bytes || state.combo.label?.zpl);
+  const hasBothFiles = Boolean(hasLabel && state.combo.doc?.bytes);
   combinePdfBtn.disabled = !hasBothFiles;
   printComboPdfBtn.disabled = !state.combo.pdfBuffer;
   comboPreviewText.textContent = hasBothFiles
-    ? "Pronto para gerar: a etiqueta fica de um lado e a DANFE/DDC do outro."
-    : "Escolha os dois PDFs para liberar a montagem.";
+    ? "Pronto para gerar: se a etiqueta for ZPL, ela sera convertida antes de juntar com a DANFE/DDC."
+    : "Escolha a etiqueta ZPL/PDF e a DANFE/DDC em PDF para liberar a montagem.";
 }
 
 function fitEmbeddedPage(embeddedPage, box) {
@@ -402,39 +403,77 @@ function fitEmbeddedPage(embeddedPage, box) {
 function comboHistoryRef() {
   const labelName = state.combo.label?.name || "etiqueta";
   const docName = state.combo.doc?.name || "danfe-ddc";
+  const labelSignature = state.combo.label?.zpl
+    ? simpleHash(state.combo.label.zpl)
+    : `${state.combo.label?.size || 0}`;
   return {
     recipient: `Combinado ${labelName}`,
-    fingerprint: simpleHash(`combo:${labelName}:${state.combo.label?.size || 0}:${docName}:${state.combo.doc?.size || 0}`),
+    fingerprint: simpleHash(`combo:${labelName}:${labelSignature}:${docName}:${state.combo.doc?.size || 0}`),
     labelNumber: 1
   };
 }
 
-async function readComboPdfFile(input, type) {
+async function readComboLabelFile(input) {
   const file = input.files?.[0];
   if (!file) return;
-  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
-    showStatus("Escolha um arquivo PDF para montar a folha 10x15.");
+  const name = file.name.toLowerCase();
+  const isPdf = name.endsWith(".pdf") || file.type === "application/pdf";
+  const isZpl = name.endsWith(".zpl") || name.endsWith(".txt") || file.type === "text/plain";
+
+  if (!isPdf && !isZpl) {
+    showStatus("Escolha uma etiqueta em PDF, ZPL ou TXT.");
     input.value = "";
     return;
   }
 
-  const bytes = await file.arrayBuffer();
-  state.combo[type] = {
+  state.combo.label = {
     name: file.name,
     size: file.size,
-    bytes
+    type: isPdf ? "pdf" : "zpl",
+    bytes: isPdf ? await file.arrayBuffer() : null,
+    zpl: isZpl ? await file.text() : ""
   };
   state.combo.pdfBuffer = null;
   state.combo.refs = [];
-
-  if (type === "label") comboLabelName.textContent = formatPdfFile(file);
-  if (type === "doc") comboDocName.textContent = formatPdfFile(file);
+  comboLabelName.textContent = formatPdfFile(file);
   updateComboState();
 }
 
+async function readComboDocFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+    showStatus("Escolha a DANFE/DDC em PDF.");
+    input.value = "";
+    return;
+  }
+
+  state.combo.doc = {
+    name: file.name,
+    size: file.size,
+    bytes: await file.arrayBuffer()
+  };
+  state.combo.pdfBuffer = null;
+  state.combo.refs = [];
+  comboDocName.textContent = formatPdfFile(file);
+  updateComboState();
+}
+
+async function getComboLabelPdfBytes() {
+  if (state.combo.label?.bytes) return state.combo.label.bytes;
+  if (!state.combo.label?.zpl) throw new Error("Suba uma etiqueta em ZPL/TXT ou PDF.");
+
+  const response = await postJson("/api/pdf-all", {
+    zpl: state.combo.label.zpl,
+    density: density.value || "8dpmm",
+    size: labelSize.value || "4x6"
+  }, 180000);
+  return response.arrayBuffer();
+}
+
 async function combineLabelAndDocPdf() {
-  if (!state.combo.label?.bytes || !state.combo.doc?.bytes) {
-    showStatus("Suba a etiqueta PDF e a DANFE/DDC PDF primeiro.");
+  if ((!state.combo.label?.bytes && !state.combo.label?.zpl) || !state.combo.doc?.bytes) {
+    showStatus("Suba a etiqueta ZPL/PDF e a DANFE/DDC PDF primeiro.");
     return;
   }
   if (!window.PDFLib) {
@@ -446,7 +485,9 @@ async function combineLabelAndDocPdf() {
   if (!canPrintRefs([ref], "gerar a etiqueta combinada")) return;
 
   try {
-    showStatus("Montando etiqueta + DANFE/DDC em 10x15...");
+    showStatus(state.combo.label.type === "zpl"
+      ? "Convertendo ZPL da Shopee e montando com a DANFE/DDC..."
+      : "Montando etiqueta + DANFE/DDC em 10x15...");
     const { PDFDocument, rgb } = PDFLib;
     const mm = 72 / 25.4;
     const landscape = comboOrientation.value === "landscape";
@@ -455,7 +496,8 @@ async function combineLabelAndDocPdf() {
     const margin = 4 * mm;
     const gap = 3 * mm;
     const output = await PDFDocument.create();
-    const labelPdf = await PDFDocument.load(state.combo.label.bytes);
+    const labelPdfBytes = await getComboLabelPdfBytes();
+    const labelPdf = await PDFDocument.load(labelPdfBytes);
     const docPdf = await PDFDocument.load(state.combo.doc.bytes);
     const labelPages = labelPdf.getPages();
     const docPages = docPdf.getPages();
@@ -1669,11 +1711,11 @@ fileInput.addEventListener("change", async () => {
 });
 
 comboLabelInput.addEventListener("change", async () => {
-  await readComboPdfFile(comboLabelInput, "label");
+  await readComboLabelFile(comboLabelInput);
 });
 
 comboDocInput.addEventListener("change", async () => {
-  await readComboPdfFile(comboDocInput, "doc");
+  await readComboDocFile(comboDocInput);
 });
 
 shopeeSheetInput.addEventListener("change", async () => {
