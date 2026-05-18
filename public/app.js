@@ -8,6 +8,12 @@ const state = {
   shopeeOrders: [],
   separationSource: "",
   printHistory: {},
+  combo: {
+    label: null,
+    doc: null,
+    pdfBuffer: null,
+    refs: []
+  },
   expedition: (() => {
     try {
       return JSON.parse(localStorage.getItem("expeditionStatus") || "{}");
@@ -91,6 +97,15 @@ const historyTitle = document.querySelector("#historyTitle");
 const historyText = document.querySelector("#historyText");
 const historyList = document.querySelector("#historyList");
 const clearHistoryBtn = document.querySelector("#clearHistoryBtn");
+const comboLabelInput = document.querySelector("#comboLabelInput");
+const comboDocInput = document.querySelector("#comboDocInput");
+const comboLabelName = document.querySelector("#comboLabelName");
+const comboDocName = document.querySelector("#comboDocName");
+const comboOrientation = document.querySelector("#comboOrientation");
+const comboLayout = document.querySelector("#comboLayout");
+const comboPreviewText = document.querySelector("#comboPreviewText");
+const combinePdfBtn = document.querySelector("#combinePdfBtn");
+const printComboPdfBtn = document.querySelector("#printComboPdfBtn");
 const viewPanels = document.querySelectorAll(".view-panel");
 const viewLinks = document.querySelectorAll("[data-view-target]");
 
@@ -356,6 +371,146 @@ function payload(extra = {}) {
     size: labelSize.value,
     ...extra
   };
+}
+
+function formatPdfFile(file) {
+  if (!file) return "";
+  return `${file.name} (${formatKb(file.size)})`;
+}
+
+function updateComboState() {
+  const hasBothFiles = Boolean(state.combo.label?.bytes && state.combo.doc?.bytes);
+  combinePdfBtn.disabled = !hasBothFiles;
+  printComboPdfBtn.disabled = !state.combo.pdfBuffer;
+  comboPreviewText.textContent = hasBothFiles
+    ? "Pronto para gerar: a etiqueta fica de um lado e a DANFE/DDC do outro."
+    : "Escolha os dois PDFs para liberar a montagem.";
+}
+
+function fitEmbeddedPage(embeddedPage, box) {
+  const scale = Math.min(box.width / embeddedPage.width, box.height / embeddedPage.height);
+  const width = embeddedPage.width * scale;
+  const height = embeddedPage.height * scale;
+  return {
+    x: box.x + ((box.width - width) / 2),
+    y: box.y + ((box.height - height) / 2),
+    width,
+    height
+  };
+}
+
+function comboHistoryRef() {
+  const labelName = state.combo.label?.name || "etiqueta";
+  const docName = state.combo.doc?.name || "danfe-ddc";
+  return {
+    recipient: `Combinado ${labelName}`,
+    fingerprint: simpleHash(`combo:${labelName}:${state.combo.label?.size || 0}:${docName}:${state.combo.doc?.size || 0}`),
+    labelNumber: 1
+  };
+}
+
+async function readComboPdfFile(input, type) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+    showStatus("Escolha um arquivo PDF para montar a folha 10x15.");
+    input.value = "";
+    return;
+  }
+
+  const bytes = await file.arrayBuffer();
+  state.combo[type] = {
+    name: file.name,
+    size: file.size,
+    bytes
+  };
+  state.combo.pdfBuffer = null;
+  state.combo.refs = [];
+
+  if (type === "label") comboLabelName.textContent = formatPdfFile(file);
+  if (type === "doc") comboDocName.textContent = formatPdfFile(file);
+  updateComboState();
+}
+
+async function combineLabelAndDocPdf() {
+  if (!state.combo.label?.bytes || !state.combo.doc?.bytes) {
+    showStatus("Suba a etiqueta PDF e a DANFE/DDC PDF primeiro.");
+    return;
+  }
+  if (!window.PDFLib) {
+    showStatus("Motor de PDF nao carregou. Recarregue a pagina e tente novamente.");
+    return;
+  }
+
+  const ref = comboHistoryRef();
+  if (!canPrintRefs([ref], "gerar a etiqueta combinada")) return;
+
+  try {
+    showStatus("Montando etiqueta + DANFE/DDC em 10x15...");
+    const { PDFDocument, rgb } = PDFLib;
+    const mm = 72 / 25.4;
+    const landscape = comboOrientation.value === "landscape";
+    const pageWidth = (landscape ? 150 : 100) * mm;
+    const pageHeight = (landscape ? 100 : 150) * mm;
+    const margin = 4 * mm;
+    const gap = 3 * mm;
+    const output = await PDFDocument.create();
+    const labelPdf = await PDFDocument.load(state.combo.label.bytes);
+    const docPdf = await PDFDocument.load(state.combo.doc.bytes);
+    const labelPages = labelPdf.getPages();
+    const docPages = docPdf.getPages();
+    const totalPages = Math.max(labelPages.length, docPages.length);
+    const sideBySide = comboLayout.value === "side";
+
+    for (let index = 0; index < totalPages; index += 1) {
+      const page = output.addPage([pageWidth, pageHeight]);
+      page.drawRectangle({ x: 0, y: 0, width: pageWidth, height: pageHeight, color: rgb(1, 1, 1) });
+
+      const labelPage = labelPages[Math.min(index, labelPages.length - 1)];
+      const docPage = docPages[Math.min(index, docPages.length - 1)];
+      const embeddedLabel = await output.embedPage(labelPage);
+      const embeddedDoc = await output.embedPage(docPage);
+
+      const labelBox = sideBySide
+        ? { x: margin, y: margin, width: (pageWidth - (margin * 2) - gap) / 2, height: pageHeight - (margin * 2) }
+        : { x: margin, y: (pageHeight + gap) / 2, width: pageWidth - (margin * 2), height: (pageHeight - (margin * 2) - gap) / 2 };
+      const docBox = sideBySide
+        ? { x: labelBox.x + labelBox.width + gap, y: margin, width: labelBox.width, height: labelBox.height }
+        : { x: margin, y: margin, width: labelBox.width, height: labelBox.height };
+
+      page.drawPage(embeddedLabel, fitEmbeddedPage(embeddedLabel, labelBox));
+      page.drawPage(embeddedDoc, fitEmbeddedPage(embeddedDoc, docBox));
+    }
+
+    const bytes = await output.save();
+    state.combo.pdfBuffer = bytes;
+    state.combo.refs = [ref];
+    const filename = "etiqueta_danfe_ddc_10x15.pdf";
+    const url = downloadBlob(new Blob([bytes], { type: "application/pdf" }), filename, true);
+    showPdfResult(url, filename, totalPages);
+    showLabelPreview(url);
+    updateComboState();
+    showStatus("PDF combinado pronto. Se o download nao iniciou, clique em Baixar novamente.");
+  } catch (error) {
+    showStatus(error.message || "Nao consegui montar a etiqueta + DANFE/DDC.");
+  }
+}
+
+async function printComboPdf() {
+  if (!state.combo.pdfBuffer) {
+    showStatus("Gere o PDF combinado antes de imprimir.");
+    return;
+  }
+  if (!canPrintRefs(state.combo.refs, "imprimir a etiqueta combinada")) return;
+
+  try {
+    showStatus("Enviando etiqueta + DANFE/DDC para a impressora...");
+    await printPdfBufferWithQz(state.combo.pdfBuffer, "Etiqueta + DANFE/DDC enviada para a impressora.");
+    registerPrintedRefs(state.combo.refs, "QZ etiqueta + DANFE/DDC");
+    showStatus("Etiqueta + DANFE/DDC enviada pelo QZ Tray.");
+  } catch (error) {
+    showStatus(error.message || "Nao consegui imprimir a etiqueta combinada.");
+  }
 }
 
 function fileKey(file) {
@@ -1513,6 +1668,14 @@ fileInput.addEventListener("change", async () => {
   await addZplFiles(fileInput.files);
 });
 
+comboLabelInput.addEventListener("change", async () => {
+  await readComboPdfFile(comboLabelInput, "label");
+});
+
+comboDocInput.addEventListener("change", async () => {
+  await readComboPdfFile(comboDocInput, "doc");
+});
+
 shopeeSheetInput.addEventListener("change", async () => {
   const file = shopeeSheetInput.files?.[0];
   if (!file) return;
@@ -1562,6 +1725,8 @@ printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", printCompactSeparation);
 clearHistoryBtn.addEventListener("click", clearPrintHistory);
+combinePdfBtn.addEventListener("click", combineLabelAndDocPdf);
+printComboPdfBtn.addEventListener("click", printComboPdf);
 themeToggle?.addEventListener("click", () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });

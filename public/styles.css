@@ -448,6 +448,15 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.combo-panel {
+  margin: 16px 28px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
 .section-title {
   display: flex;
   align-items: flex-end;
@@ -494,6 +503,65 @@ h1 {
 
 .file-drop input {
   display: none;
+}
+
+.combo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.combo-drop {
+  min-height: 112px;
+}
+
+.combo-preview-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 14px;
+  background: linear-gradient(135deg, #f7fbfc 0%, #eef8fb 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.combo-preview-strip strong,
+.combo-preview-strip span {
+  display: block;
+}
+
+.combo-preview-strip > div:first-child span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.combo-miniature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  width: 180px;
+  height: 96px;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 2px #f1f5f7;
+}
+
+.combo-miniature span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px dashed #9bb2bc;
+  color: #294454;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
 }
 
 .field-grid {
@@ -1376,6 +1444,7 @@ html[data-theme="dark"] .start-card,
 html[data-theme="dark"] .main-start,
 html[data-theme="dark"] .metric-card,
 html[data-theme="dark"] .controls,
+html[data-theme="dark"] .combo-panel,
 html[data-theme="dark"] .qz-panel,
 html[data-theme="dark"] .qz-panel.wbuy-panel,
 html[data-theme="dark"] .separation-panel,
@@ -1395,6 +1464,8 @@ html[data-theme="dark"] dialog {
 html[data-theme="dark"] .app-nav,
 html[data-theme="dark"] .nav-card,
 html[data-theme="dark"] .file-drop,
+html[data-theme="dark"] .combo-preview-strip,
+html[data-theme="dark"] .combo-miniature,
 html[data-theme="dark"] .sheet-upload,
 html[data-theme="dark"] .item-list li,
 html[data-theme="dark"] .history-list span,
@@ -1411,6 +1482,7 @@ html[data-theme="dark"] .brand,
 html[data-theme="dark"] .app-nav,
 html[data-theme="dark"] .topbar,
 html[data-theme="dark"] .controls,
+html[data-theme="dark"] .combo-panel,
 html[data-theme="dark"] .qz-panel,
 html[data-theme="dark"] .separation-panel,
 html[data-theme="dark"] .preview-panel,
@@ -1595,6 +1667,7 @@ dialog::backdrop {
 
 @media (max-width: 620px) {
   .controls,
+  .combo-panel,
   .qz-panel,
   .result-panel,
   .preview-panel,
@@ -1610,6 +1683,7 @@ dialog::backdrop {
   .topbar,
   .dashboard-panel,
   .controls,
+  .combo-panel,
   .qz-panel,
   .result-panel,
   .preview-panel,
@@ -1625,6 +1699,7 @@ dialog::backdrop {
   }
 
   .field-grid,
+  .combo-grid,
   .summary,
   .print-history,
   .separation-stats,
@@ -1666,6 +1741,15 @@ dialog::backdrop {
   .preview-device-bar {
     flex-direction: column;
     gap: 3px;
+  }
+
+  .combo-preview-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .combo-miniature {
+    width: 100%;
   }
 }
 
