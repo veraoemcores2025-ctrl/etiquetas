@@ -119,11 +119,17 @@ let scanTimer = null;
 let cameraStream = null;
 let barcodeDetector = null;
 let cameraScanLoop = 0;
+let zxingMobileReader = null;
+let zxingMobileControls = null;
 let lastCameraScanAt = 0;
 let lastCameraCode = "";
 let lastCameraCodeAt = 0;
 const PRINT_HISTORY_KEY = "printHistoryV1";
 const PRINT_HISTORY_TTL = 7 * 24 * 60 * 60 * 1000;
+
+function getZxingBrowser() {
+  return window.ZXingBrowser || globalThis.ZXingBrowser || null;
+}
 
 function applyTheme(theme) {
   const safeTheme = theme === "dark" ? "dark" : "light";
@@ -962,7 +968,7 @@ function setMobileScanStatus(message, type = "") {
 }
 
 function canUseCameraScanner() {
-  return Boolean(window.navigator?.mediaDevices?.getUserMedia && window.BarcodeDetector);
+  return Boolean(window.navigator?.mediaDevices?.getUserMedia && (window.BarcodeDetector || getZxingBrowser()));
 }
 
 async function ensureBarcodeDetector() {
@@ -1015,11 +1021,30 @@ async function scanCameraFrame() {
 
 async function startCameraScanner() {
   if (!canUseCameraScanner()) {
-    setMobileScanStatus("Este navegador nao liberou leitor por camera. Use Chrome no Android ou o campo de bipagem manual.", "scan-error");
+    setMobileScanStatus("Este navegador nao liberou camera para leitura. Abra pelo Safari/Chrome atualizado e permita o acesso a camera.", "scan-error");
     return;
   }
 
   try {
+    const zxing = getZxingBrowser();
+    if (!window.BarcodeDetector && zxing) {
+      zxingMobileReader = zxingMobileReader || new zxing.BrowserMultiFormatReader();
+      zxingMobileControls = await zxingMobileReader.decodeFromVideoDevice(undefined, mobileScanVideo, (result) => {
+        const rawValue = result?.getText?.() || result?.text || "";
+        const now = Date.now();
+        if (!rawValue || (rawValue === lastCameraCode && now - lastCameraCodeAt < 1500)) return;
+        lastCameraCode = rawValue;
+        lastCameraCodeAt = now;
+        scanInput.value = rawValue;
+        scanAction.value = mobileScanAction.value;
+        processScannedCode(rawValue, mobileScanAction.value, mobileScanResult, false);
+      });
+      startCameraScanBtn.disabled = true;
+      stopCameraScanBtn.disabled = false;
+      setMobileScanStatus("Camera ativa no modo iPhone/Safari. Aponte para o codigo da etiqueta.", "scan-success");
+      return;
+    }
+
     barcodeDetector = await ensureBarcodeDetector();
     cameraStream = await window.navigator.mediaDevices.getUserMedia({
       video: {
@@ -1044,6 +1069,10 @@ async function startCameraScanner() {
 function stopCameraScanner() {
   if (cameraScanLoop) cancelAnimationFrame(cameraScanLoop);
   cameraScanLoop = 0;
+  if (zxingMobileControls) {
+    zxingMobileControls.stop();
+    zxingMobileControls = null;
+  }
   if (cameraStream) {
     cameraStream.getTracks().forEach(track => track.stop());
   }

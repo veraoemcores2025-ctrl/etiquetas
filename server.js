@@ -166,6 +166,12 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/zxing-browser.min.js") {
+      const file = await readFile(join(__dirname, "public", "zxing-browser.min.js"));
+      send(res, 200, file, { "Content-Type": mimeTypes[".js"] });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname.startsWith("/assets/")) {
       const assetPath = join(__dirname, "public", url.pathname.replace("/assets/", ""));
       const file = await readFile(assetPath);

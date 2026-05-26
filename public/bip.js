@@ -14,9 +14,15 @@ const STORAGE_KEY = "mobileBipHistoryV1";
 let stream = null;
 let detector = null;
 let loopId = 0;
+let zxingReader = null;
+let zxingControls = null;
 let lastCode = "";
 let lastCodeAt = 0;
 let lastFrameAt = 0;
+
+function getZxingBrowser() {
+  return window.ZXingBrowser || globalThis.ZXingBrowser || null;
+}
 
 function loadHistory() {
   try {
@@ -111,7 +117,7 @@ function registerCode(rawCode) {
 }
 
 function canScanWithCamera() {
-  return Boolean(window.navigator?.mediaDevices?.getUserMedia && window.BarcodeDetector);
+  return Boolean(window.navigator?.mediaDevices?.getUserMedia && (window.BarcodeDetector || getZxingBrowser()));
 }
 
 async function ensureDetector() {
@@ -150,11 +156,28 @@ async function scanFrame() {
 
 async function startCamera() {
   if (!canScanWithCamera()) {
-    setStatus("Use Chrome no Android ou atualize o navegador. Este aparelho nao liberou leitura por camera.", "bad");
+    setStatus("Este navegador nao liberou camera para leitura. Abra pelo Safari/Chrome atualizado e permita o acesso a camera.", "bad");
     return;
   }
 
   try {
+    const zxing = getZxingBrowser();
+    if (!window.BarcodeDetector && zxing) {
+      zxingReader = zxingReader || new zxing.BrowserMultiFormatReader();
+      zxingControls = await zxingReader.decodeFromVideoDevice(undefined, camera, (result) => {
+        const value = result?.getText?.() || result?.text || "";
+        const now = Date.now();
+        if (!value || (value === lastCode && now - lastCodeAt < 1600)) return;
+        lastCode = value;
+        lastCodeAt = now;
+        registerCode(value);
+      });
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      setStatus("Camera ativa no modo iPhone/Safari. Aponte para o codigo da etiqueta.", "ok");
+      return;
+    }
+
     detector = await ensureDetector();
     stream = await window.navigator.mediaDevices.getUserMedia({
       video: {
@@ -179,6 +202,10 @@ async function startCamera() {
 function stopCamera() {
   if (loopId) cancelAnimationFrame(loopId);
   loopId = 0;
+  if (zxingControls) {
+    zxingControls.stop();
+    zxingControls = null;
+  }
   if (stream) stream.getTracks().forEach(track => track.stop());
   stream = null;
   camera.srcObject = null;
