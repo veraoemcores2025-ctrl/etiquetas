@@ -8,6 +8,13 @@ const state = {
   shopeeOrders: [],
   separationSource: "",
   printHistory: {},
+  productCodes: (() => {
+    try {
+      return JSON.parse(localStorage.getItem("productCodeCatalog") || "[]");
+    } catch {
+      return [];
+    }
+  })(),
   combo: {
     label: null,
     doc: null,
@@ -64,6 +71,15 @@ const scanPendingCount = document.querySelector("#scanPendingCount");
 const scanSeparatedCount = document.querySelector("#scanSeparatedCount");
 const scanLabeledCount = document.querySelector("#scanLabeledCount");
 const scanShippedCount = document.querySelector("#scanShippedCount");
+const productBarcodeInput = document.querySelector("#productBarcodeInput");
+const productNameInput = document.querySelector("#productNameInput");
+const productVariationInput = document.querySelector("#productVariationInput");
+const productLocationInput = document.querySelector("#productLocationInput");
+const saveProductCodeBtn = document.querySelector("#saveProductCodeBtn");
+const productCodeBulkInput = document.querySelector("#productCodeBulkInput");
+const importProductCodesBtn = document.querySelector("#importProductCodesBtn");
+const productLookupResult = document.querySelector("#productLookupResult");
+const productCodeList = document.querySelector("#productCodeList");
 const mobileScanVideo = document.querySelector("#mobileScanVideo");
 const startCameraScanBtn = document.querySelector("#startCameraScanBtn");
 const stopCameraScanBtn = document.querySelector("#stopCameraScanBtn");
@@ -766,6 +782,12 @@ function parseShopeeRows(rows) {
     const tracking = getCell(row, headers, ["Número de rastreamento", "Numero de rastreamento"]);
     const product = getCell(row, headers, ["Nome do Produto"]);
     const variation = getCell(row, headers, ["Nome da variação", "Nome da variacao"]);
+    const sku = getCell(row, headers, [
+      "Numero de referencia SKU",
+      "NÃºmero de referÃªncia SKU",
+      "Nº de referencia do SKU principal",
+      "NÂº de referÃªncia do SKU principal"
+    ]);
     const qty = Number(getCell(row, headers, ["Quantidade"])) || 1;
 
     if (!orders.has(orderId)) {
@@ -783,7 +805,7 @@ function parseShopeeRows(rows) {
       });
     }
 
-    orders.get(orderId).items.push({ product, variation, qty });
+    orders.get(orderId).items.push({ product, variation, sku, qty });
   }
 
   return [...orders.values()];
@@ -843,8 +865,121 @@ function getOrderSearchText(order) {
     order.recipient,
     order.labelRecipient,
     order.address,
-    ...order.items.flatMap(item => [item.product, item.variation])
+    ...order.items.flatMap(item => [item.product, item.variation, item.sku])
   ].filter(Boolean).join(" "));
+}
+
+function saveProductCodes() {
+  localStorage.setItem("productCodeCatalog", JSON.stringify(state.productCodes.slice(0, 1000)));
+}
+
+function getProductSearchText(product) {
+  return normalizeCode([product.name, product.variation, product.location].filter(Boolean).join(" "));
+}
+
+function findProductByScan(rawCode) {
+  const code = normalizeCode(rawCode);
+  if (!code) return null;
+  return (state.productCodes || []).find(product => normalizeCode(product.code) === code) || null;
+}
+
+function orderHasProduct(order, product) {
+  const productText = getProductSearchText(product);
+  const productCode = normalizeCode(product.code);
+  const name = normalizeCode(product.name);
+  const variation = normalizeCode(product.variation);
+  if (!name && !variation && !productCode) return false;
+
+  return (order.items || []).some(item => {
+    if (productCode && normalizeCode(item.sku) === productCode) return true;
+    const itemText = normalizeCode([item.product, item.variation, item.sku].filter(Boolean).join(" "));
+    const nameMatches = name ? itemText.includes(name) || productText.includes(normalizeCode(item.product)) : true;
+    const variationMatches = variation ? itemText.includes(variation) || variation.split(/[-|/]/).map(part => part.trim()).filter(Boolean).some(part => itemText.includes(normalizeCode(part))) : true;
+    return nameMatches && variationMatches;
+  });
+}
+
+function findOrdersByProduct(product) {
+  return (state.shopeeOrders || []).filter(order => orderHasProduct(order, product));
+}
+
+function renderProductCodeList() {
+  if (!productCodeList) return;
+  const products = state.productCodes || [];
+  if (!products.length) {
+    productCodeList.innerHTML = '<div class="empty-product-codes">Nenhum codigo cadastrado ainda.</div>';
+    return;
+  }
+
+  productCodeList.innerHTML = products.map(product => `
+    <div class="product-code-row">
+      <strong>${escapeHtml(product.code)}</strong>
+      <span>${escapeHtml(product.name || "-")}</span>
+      <em>${escapeHtml([product.variation, product.location].filter(Boolean).join(" | ") || "Sem variacao/local")}</em>
+      <button type="button" data-remove-product-code="${encodeURIComponent(product.code)}">Remover</button>
+    </div>
+  `).join("");
+}
+
+function setProductLookupResult(product, orders) {
+  if (!productLookupResult) return;
+  const orderList = orders.slice(0, 8).map(order => `#${order.orderId}`).join(", ");
+  productLookupResult.className = "product-lookup-result found";
+  productLookupResult.innerHTML = `
+    <strong>${escapeHtml(product.name || product.code)}</strong>
+    <span>${escapeHtml([product.variation, product.location].filter(Boolean).join(" | ") || "Produto localizado")}</span>
+    <small>${orders.length ? `${orders.length} pedido(s): ${orderList}${orders.length > 8 ? "..." : ""}` : "Nenhum pedido da planilha contem esse item."}</small>
+  `;
+}
+
+function upsertProductCode(product) {
+  const code = normalizeCode(product.code);
+  if (!code || !product.name) return false;
+  const next = {
+    code,
+    name: String(product.name || "").trim(),
+    variation: String(product.variation || "").trim(),
+    location: String(product.location || "").trim()
+  };
+  const index = state.productCodes.findIndex(item => normalizeCode(item.code) === code);
+  if (index >= 0) state.productCodes[index] = next;
+  else state.productCodes.unshift(next);
+  saveProductCodes();
+  renderProductCodeList();
+  return true;
+}
+
+function handleSaveProductCode() {
+  const saved = upsertProductCode({
+    code: productBarcodeInput.value,
+    name: productNameInput.value,
+    variation: productVariationInput.value,
+    location: productLocationInput.value
+  });
+  if (!saved) {
+    productLookupResult.className = "product-lookup-result error";
+    productLookupResult.textContent = "Preencha pelo menos codigo de barras e produto.";
+    return;
+  }
+  productBarcodeInput.value = "";
+  productNameInput.value = "";
+  productVariationInput.value = "";
+  productLocationInput.value = "";
+  productLookupResult.className = "product-lookup-result found";
+  productLookupResult.textContent = "Produto salvo. Agora pode bipar esse codigo no leitor.";
+  productBarcodeInput.focus();
+}
+
+function handleImportProductCodes() {
+  const lines = String(productCodeBulkInput.value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  let imported = 0;
+  for (const line of lines) {
+    const [code, name, variation = "", location = ""] = line.split(/[;\t]/).map(part => part.trim());
+    if (upsertProductCode({ code, name, variation, location })) imported += 1;
+  }
+  productCodeBulkInput.value = "";
+  productLookupResult.className = imported ? "product-lookup-result found" : "product-lookup-result error";
+  productLookupResult.textContent = imported ? `${imported} produto(s) importado(s).` : "Nao encontrei linhas validas para importar.";
 }
 
 function findOrderByScan(rawCode) {
@@ -919,11 +1054,27 @@ function processScannedCode(rawCode, action, target = scanResult, focusManualInp
 
   const order = findOrderByScan(code);
   if (!order) {
+    const product = findProductByScan(code);
+    if (product) {
+      const orders = findOrdersByProduct(product);
+      if (orders[0]) focusOrderCard(orders[0].orderId);
+      setProductLookupResult(product, orders);
+      renderScanOutcome(
+        target,
+        true,
+        `Produto localizado: ${product.name}`,
+        `${product.variation || "Sem variacao"}${product.location ? ` - ${product.location}` : ""} - ${orders.length} pedido(s) com esse item`
+      );
+      playScanTone(true);
+      if (focusManualInput) scanInput.select();
+      return true;
+    }
+
     renderScanOutcome(
       target,
       false,
       "Nao encontrei esse codigo.",
-      "Confira se a planilha da Shopee ja foi subida e tente bipar o pedido ou rastreio."
+      "Confira se a planilha da Shopee ja foi subida ou cadastre esse codigo como produto."
     );
     playScanTone(false);
     if (focusManualInput) scanInput.select();
@@ -1268,6 +1419,7 @@ function renderShopeeSeparation() {
                 <div>
                   <span>${escapeHtml(variation.color)}</span>
                   ${variation.size ? `<span>Tam. ${escapeHtml(variation.size)}</span>` : ""}
+                  ${item.sku ? `<span>SKU ${escapeHtml(item.sku)}</span>` : ""}
                 </div>
               </div>
             </div>
@@ -1366,7 +1518,7 @@ async function downloadSeparationPdf() {
         drawPdfText(page, line, { x: margin + 36, y, size: 9, font });
         y -= 10;
       });
-      drawPdfText(page, `Cor: ${variation.color}   ${variation.size ? `Tamanho: ${variation.size}` : ""}`, { x: margin + 36, y, size: 9, font, color: rgb(0.05, 0.35, 0.4) });
+      drawPdfText(page, `Cor: ${variation.color}   ${variation.size ? `Tamanho: ${variation.size}` : ""}   ${item.sku ? `SKU: ${item.sku}` : ""}`.slice(0, 96), { x: margin + 36, y, size: 9, font, color: rgb(0.05, 0.35, 0.4) });
       y -= 18;
     });
 
@@ -1906,6 +2058,7 @@ loadPrintHistory();
 updateZplFileSummary();
 updateDashboard();
 updateHistoryPanel();
+renderProductCodeList();
 applyTheme(document.documentElement.dataset.theme || "light");
 activateView((window.location.hash || "#dashboard").replace("#", ""));
 analyzeBtn.addEventListener("click", analyze);
@@ -1927,6 +2080,21 @@ printSeparationBtn.addEventListener("click", printCompactSeparation);
 clearHistoryBtn.addEventListener("click", clearPrintHistory);
 combinePdfBtn.addEventListener("click", combineLabelAndDocPdf);
 printComboPdfBtn.addEventListener("click", printComboPdf);
+saveProductCodeBtn.addEventListener("click", handleSaveProductCode);
+importProductCodesBtn.addEventListener("click", handleImportProductCodes);
+productBarcodeInput.addEventListener("keydown", event => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  productNameInput.focus();
+});
+productCodeList.addEventListener("click", event => {
+  const button = event.target.closest("[data-remove-product-code]");
+  if (!button) return;
+  const code = normalizeCode(decodeURIComponent(button.dataset.removeProductCode || ""));
+  state.productCodes = state.productCodes.filter(product => normalizeCode(product.code) !== code);
+  saveProductCodes();
+  renderProductCodeList();
+});
 startCameraScanBtn.addEventListener("click", startCameraScanner);
 stopCameraScanBtn.addEventListener("click", stopCameraScanner);
 mobileScanAction.addEventListener("change", () => {

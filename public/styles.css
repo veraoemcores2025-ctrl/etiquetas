@@ -1079,6 +1079,120 @@ button.warning:hover {
   font-size: 24px;
 }
 
+.product-code-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.product-code-copy h3 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.product-code-copy p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.product-code-form {
+  display: grid;
+  grid-template-columns: 180px minmax(220px, 1fr) minmax(170px, 240px) minmax(170px, 220px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.product-code-import {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.product-code-import textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.product-lookup-result {
+  padding: 13px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.product-lookup-result.found {
+  border-color: #a8d9c1;
+  background: #eaf8f1;
+  color: #17633d;
+}
+
+.product-lookup-result.error {
+  border-color: #efb49f;
+  background: #fff1ea;
+  color: #8f260d;
+}
+
+.product-lookup-result strong,
+.product-lookup-result span,
+.product-lookup-result small {
+  display: block;
+}
+
+.product-lookup-result strong {
+  color: var(--text);
+}
+
+.product-lookup-result span,
+.product-lookup-result small {
+  margin-top: 5px;
+}
+
+.product-code-list {
+  display: grid;
+  gap: 8px;
+}
+
+.product-code-row {
+  display: grid;
+  grid-template-columns: 130px minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.product-code-row em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.product-code-row button {
+  padding: 9px 12px;
+  background: #e9eef2;
+  color: #263946;
+}
+
+.empty-product-codes {
+  padding: 14px;
+  color: var(--muted);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
 .separation-list {
   display: grid;
   gap: 14px;
@@ -1529,6 +1643,7 @@ html[data-theme="dark"] .qz-panel.wbuy-panel,
 html[data-theme="dark"] .separation-panel,
 html[data-theme="dark"] .separation-stats div,
 html[data-theme="dark"] .scan-panel,
+html[data-theme="dark"] .product-code-panel,
 html[data-theme="dark"] .separation-card,
 html[data-theme="dark"] .preview-panel,
 html[data-theme="dark"] .preview-meta span,
@@ -1549,6 +1664,8 @@ html[data-theme="dark"] .phone-tip,
 html[data-theme="dark"] .sheet-upload,
 html[data-theme="dark"] .item-list li,
 html[data-theme="dark"] .history-list span,
+html[data-theme="dark"] .product-code-row,
+html[data-theme="dark"] .empty-product-codes,
 html[data-theme="dark"] .pick-item,
 html[data-theme="dark"] .status-lane {
   background: var(--surface-soft);
@@ -1574,7 +1691,8 @@ html[data-theme="dark"] .table-section {
 }
 
 html[data-theme="dark"] input,
-html[data-theme="dark"] select {
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
   background: #0f172a;
   color: var(--text);
   border-color: var(--line-strong);
@@ -1702,6 +1820,12 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 
+  .product-code-form,
+  .product-code-import,
+  .product-code-row {
+    grid-template-columns: 1fr;
+  }
+
   .qz-panel,
   .result-panel,
   .separation-head,
@@ -1756,6 +1880,7 @@ dialog::backdrop {
   .preview-panel,
   .summary,
   .print-history,
+  .product-code-panel,
   .separation-panel,
   .table-section {
     margin-left: 12px;
@@ -1772,6 +1897,7 @@ dialog::backdrop {
   .preview-panel,
   .summary div,
   .separation-panel,
+  .product-code-panel,
   .side {
     padding-left: 16px;
     padding-right: 16px;

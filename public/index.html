@@ -379,13 +379,13 @@
           <section class="scan-panel" aria-label="Leitor de codigo">
             <div class="scan-copy">
               <span class="eyebrow">Leitor de codigo</span>
-              <h3>Bipe pedido ou rastreio</h3>
-              <p>Use o leitor como teclado. Ao bipar, a plataforma localiza o pedido e atualiza o status da expedicao.</p>
+              <h3>Bipe pedido, rastreio ou produto</h3>
+              <p>Use o leitor como teclado. Ao bipar pedido/rastreio a plataforma atualiza o status; ao bipar produto ela mostra onde esse item aparece.</p>
             </div>
             <div class="scan-box">
               <label>
                 Codigo lido
-                <input id="scanInput" type="text" inputmode="text" autocomplete="off" placeholder="Bipe aqui o pedido, rastreio ou usuario">
+                <input id="scanInput" type="text" inputmode="text" autocomplete="off" placeholder="Bipe aqui pedido, rastreio ou codigo do produto">
               </label>
               <label>
                 Ao bipar
@@ -412,6 +412,42 @@
               <div><span class="stat-label">Etiquetados</span><strong id="scanLabeledCount">0</strong></div>
               <div><span class="stat-label">Despachados</span><strong id="scanShippedCount">0</strong></div>
             </div>
+          </section>
+
+          <section class="product-code-panel" aria-label="Codigos de produto">
+            <div class="product-code-copy">
+              <span class="eyebrow">Produtos por codigo</span>
+              <h3>Localizar item pelo codigo de barras</h3>
+              <p>Cadastre o codigo da peca uma vez. Depois, ao bipar o produto, a plataforma encontra os pedidos que contem esse item.</p>
+            </div>
+            <div class="product-code-form">
+              <label>
+                Codigo de barras
+                <input id="productBarcodeInput" type="text" inputmode="text" autocomplete="off" placeholder="Ex: 789...">
+              </label>
+              <label>
+                Produto
+                <input id="productNameInput" type="text" autocomplete="off" placeholder="Ex: Macacao Fitness">
+              </label>
+              <label>
+                Variacao
+                <input id="productVariationInput" type="text" autocomplete="off" placeholder="Ex: Azul Marinho - P">
+              </label>
+              <label>
+                Local
+                <input id="productLocationInput" type="text" autocomplete="off" placeholder="Ex: Arara A / Caixa 03">
+              </label>
+              <button id="saveProductCodeBtn" type="button">Salvar produto</button>
+            </div>
+            <div class="product-code-import">
+              <label>
+                Importar em lote
+                <textarea id="productCodeBulkInput" rows="3" placeholder="Um por linha: codigo; produto; variacao; local"></textarea>
+              </label>
+              <button id="importProductCodesBtn" class="secondary" type="button">Importar lista</button>
+            </div>
+            <div id="productLookupResult" class="product-lookup-result">Nenhum produto bipado ainda.</div>
+            <div id="productCodeList" class="product-code-list"></div>
           </section>
 
           <div class="separation-list" id="shopeeRows">
