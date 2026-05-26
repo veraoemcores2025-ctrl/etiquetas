@@ -64,6 +64,11 @@ const scanPendingCount = document.querySelector("#scanPendingCount");
 const scanSeparatedCount = document.querySelector("#scanSeparatedCount");
 const scanLabeledCount = document.querySelector("#scanLabeledCount");
 const scanShippedCount = document.querySelector("#scanShippedCount");
+const mobileScanVideo = document.querySelector("#mobileScanVideo");
+const startCameraScanBtn = document.querySelector("#startCameraScanBtn");
+const stopCameraScanBtn = document.querySelector("#stopCameraScanBtn");
+const mobileScanAction = document.querySelector("#mobileScanAction");
+const mobileScanResult = document.querySelector("#mobileScanResult");
 const labelPreviewPanel = document.querySelector("#labelPreviewPanel");
 const labelPreviewFrame = document.querySelector("#labelPreviewFrame");
 let currentWbuyOrderId = "";
@@ -111,6 +116,12 @@ const viewLinks = document.querySelectorAll("[data-view-target]");
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 let scanTimer = null;
+let cameraStream = null;
+let barcodeDetector = null;
+let cameraScanLoop = 0;
+let lastCameraScanAt = 0;
+let lastCameraCode = "";
+let lastCameraCodeAt = 0;
 const PRINT_HISTORY_KEY = "printHistoryV1";
 const PRINT_HISTORY_TTL = 7 * 24 * 60 * 60 * 1000;
 
@@ -286,6 +297,9 @@ function activateView(view) {
   document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.toggle("active", item.dataset.viewTarget === nextView);
   });
+  if (nextView !== "mobile-scan" && cameraStream) {
+    stopCameraScanner();
+  }
 }
 
 function updateDashboard() {
@@ -883,36 +897,53 @@ function playScanTone(found) {
   }
 }
 
-function handleScan() {
-  const code = scanInput.value.trim();
+function renderScanOutcome(target, found, title, detail) {
+  target.className = found ? "scan-result scan-success" : "scan-result scan-error";
+  target.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span>`;
+}
+
+function processScannedCode(rawCode, action, target = scanResult, focusManualInput = true) {
+  const code = String(rawCode || "").trim();
   if (!code) {
-    scanResult.textContent = "Bipe ou digite um codigo primeiro.";
-    scanInput.focus();
-    return;
+    target.className = "scan-result";
+    target.textContent = "Bipe ou digite um codigo primeiro.";
+    if (focusManualInput) scanInput.focus();
+    return false;
   }
 
   const order = findOrderByScan(code);
   if (!order) {
-    scanResult.className = "scan-result scan-error";
-    scanResult.innerHTML = `<strong>Nao encontrei esse codigo.</strong><span>Confira se a planilha da Shopee ja foi subida e tente bipar o pedido ou rastreio.</span>`;
+    renderScanOutcome(
+      target,
+      false,
+      "Nao encontrei esse codigo.",
+      "Confira se a planilha da Shopee ja foi subida e tente bipar o pedido ou rastreio."
+    );
     playScanTone(false);
-    scanInput.select();
-    return;
+    if (focusManualInput) scanInput.select();
+    return false;
   }
 
-  const action = scanAction.value;
   if (action !== "localizar") {
     setOrderStatus(order.orderId, action, code);
   }
 
   renderShopeeSeparation();
   focusOrderCard(order.orderId);
-  scanResult.className = "scan-result scan-success";
-  scanResult.innerHTML = `
-    <strong>${escapeHtml(statusLabel(getExpeditionEntry(order.orderId).status))}: pedido ${escapeHtml(order.orderId)}</strong>
-    <span>${escapeHtml(order.tracking || "Sem rastreio")} - ${escapeHtml(order.username || order.recipient || "cliente")}</span>
-  `;
+  renderScanOutcome(
+    target,
+    true,
+    `${statusLabel(getExpeditionEntry(order.orderId).status)}: pedido ${order.orderId}`,
+    `${order.tracking || "Sem rastreio"} - ${order.username || order.recipient || "cliente"}`
+  );
   playScanTone(true);
+  return true;
+}
+
+function handleScan() {
+  const code = scanInput.value.trim();
+  const found = processScannedCode(code, scanAction.value, scanResult, true);
+  if (!found) return;
   scanInput.value = "";
   scanInput.focus();
 }
@@ -923,6 +954,104 @@ function scheduleAutoScan() {
   const code = scanInput.value.trim();
   if (code.length < 6) return;
   scanTimer = window.setTimeout(handleScan, 220);
+}
+
+function setMobileScanStatus(message, type = "") {
+  mobileScanResult.className = `scan-result${type ? ` ${type}` : ""}`;
+  mobileScanResult.textContent = message;
+}
+
+function canUseCameraScanner() {
+  return Boolean(window.navigator?.mediaDevices?.getUserMedia && window.BarcodeDetector);
+}
+
+async function ensureBarcodeDetector() {
+  if (barcodeDetector) return barcodeDetector;
+  try {
+    const formats = [
+      "qr_code",
+      "code_128",
+      "code_39",
+      "code_93",
+      "ean_13",
+      "ean_8",
+      "itf",
+      "upc_a",
+      "upc_e",
+      "pdf417",
+      "data_matrix"
+    ];
+    barcodeDetector = new BarcodeDetector({ formats });
+  } catch {
+    barcodeDetector = new BarcodeDetector();
+  }
+  return barcodeDetector;
+}
+
+async function scanCameraFrame() {
+  if (!cameraStream || !barcodeDetector || !mobileScanVideo) return;
+  const now = Date.now();
+
+  if (now - lastCameraScanAt > 280 && mobileScanVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    lastCameraScanAt = now;
+    try {
+      const codes = await barcodeDetector.detect(mobileScanVideo);
+      const rawValue = codes?.[0]?.rawValue?.trim();
+
+      if (rawValue && (rawValue !== lastCameraCode || now - lastCameraCodeAt > 1500)) {
+        lastCameraCode = rawValue;
+        lastCameraCodeAt = now;
+        scanInput.value = rawValue;
+        scanAction.value = mobileScanAction.value;
+        processScannedCode(rawValue, mobileScanAction.value, mobileScanResult, false);
+      }
+    } catch (error) {
+      setMobileScanStatus(error.message || "Nao consegui ler a camera neste quadro.", "scan-error");
+    }
+  }
+
+  cameraScanLoop = requestAnimationFrame(scanCameraFrame);
+}
+
+async function startCameraScanner() {
+  if (!canUseCameraScanner()) {
+    setMobileScanStatus("Este navegador nao liberou leitor por camera. Use Chrome no Android ou o campo de bipagem manual.", "scan-error");
+    return;
+  }
+
+  try {
+    barcodeDetector = await ensureBarcodeDetector();
+    cameraStream = await window.navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+    mobileScanVideo.srcObject = cameraStream;
+    await mobileScanVideo.play();
+    startCameraScanBtn.disabled = true;
+    stopCameraScanBtn.disabled = false;
+    setMobileScanStatus("Camera ativa. Aponte para o QR Code ou codigo de barras.", "scan-success");
+    cameraScanLoop = requestAnimationFrame(scanCameraFrame);
+  } catch (error) {
+    stopCameraScanner();
+    setMobileScanStatus(error.message || "Permita o uso da camera para bipar pelo celular.", "scan-error");
+  }
+}
+
+function stopCameraScanner() {
+  if (cameraScanLoop) cancelAnimationFrame(cameraScanLoop);
+  cameraScanLoop = 0;
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+  }
+  cameraStream = null;
+  if (mobileScanVideo) mobileScanVideo.srcObject = null;
+  startCameraScanBtn.disabled = false;
+  stopCameraScanBtn.disabled = true;
+  setMobileScanStatus("Camera parada.");
 }
 
 function buildCompactSeparationHtml() {
@@ -1769,6 +1898,11 @@ printSeparationBtn.addEventListener("click", printCompactSeparation);
 clearHistoryBtn.addEventListener("click", clearPrintHistory);
 combinePdfBtn.addEventListener("click", combineLabelAndDocPdf);
 printComboPdfBtn.addEventListener("click", printComboPdf);
+startCameraScanBtn.addEventListener("click", startCameraScanner);
+stopCameraScanBtn.addEventListener("click", stopCameraScanner);
+mobileScanAction.addEventListener("change", () => {
+  scanAction.value = mobileScanAction.value;
+});
 themeToggle?.addEventListener("click", () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });

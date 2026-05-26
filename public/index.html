@@ -36,6 +36,7 @@
           <span>Operação</span>
           <a class="nav-item" href="#labels" data-view-target="labels">Etiquetas</a>
           <a class="nav-item" href="#separation" data-view-target="separation">Separação</a>
+          <a class="nav-item" href="#mobile-scan" data-view-target="mobile-scan">Bip celular</a>
           <a class="nav-item" href="#preview" data-view-target="preview">Preview</a>
         </div>
 
@@ -103,6 +104,10 @@
               <strong>Separar pedidos</strong>
               <span>Usar planilha Shopee, leitor e mapa de itens.</span>
             </a>
+            <a class="start-card" href="#mobile-scan" data-view-target="mobile-scan">
+              <strong>Bip pelo celular</strong>
+              <span>Usar a camera do celular para ler QR Code ou codigo de barras.</span>
+            </a>
             <a class="start-card" href="#wbuy" data-view-target="wbuy">
               <strong>Buscar wBuy</strong>
               <span>Conferir pedido e gerar etiqueta própria.</span>
@@ -112,6 +117,46 @@
               <span>Conectar QZ Tray e mandar para a POS-9200-L.</span>
             </a>
           </section>
+        </section>
+
+        <section class="mobile-scan-panel view-panel" data-view="mobile-scan" id="mobile-scan">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Bip pelo celular</span>
+              <h2>Leitor por camera</h2>
+            </div>
+            <p>Abra esta tela no celular, permita a camera e aponte para o QR Code, rastreio ou codigo de barras da etiqueta.</p>
+          </div>
+
+          <div class="mobile-scan-layout">
+            <div class="phone-scanner">
+              <div class="camera-frame">
+                <video id="mobileScanVideo" playsinline muted></video>
+                <div class="scan-reticle" aria-hidden="true"></div>
+              </div>
+              <div class="camera-actions">
+                <button id="startCameraScanBtn" type="button">Abrir camera</button>
+                <button id="stopCameraScanBtn" class="secondary" type="button" disabled>Parar camera</button>
+              </div>
+            </div>
+
+            <div class="phone-scan-controls">
+              <label>
+                Ao bipar pelo celular
+                <select id="mobileScanAction">
+                  <option value="separado">Marcar separado</option>
+                  <option value="etiquetado">Marcar etiquetado</option>
+                  <option value="despachado">Marcar despachado</option>
+                  <option value="localizar">Apenas localizar</option>
+                </select>
+              </label>
+              <div class="scan-result" id="mobileScanResult">Camera parada.</div>
+              <div class="phone-tip">
+                <strong>Antes de bipar</strong>
+                <span>Suba a planilha Shopee ou o ZPL na plataforma para o pedido existir no mapa de separacao.</span>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="controls view-panel" data-view="labels" id="labels" aria-label="Configurações">

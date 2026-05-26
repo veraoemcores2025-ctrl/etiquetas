@@ -564,6 +564,84 @@ h1 {
   text-align: center;
 }
 
+.mobile-scan-panel {
+  margin: 22px 28px 24px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.mobile-scan-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(260px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.phone-scanner,
+.phone-scan-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.camera-frame {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  background: #07131a;
+  border: 1px solid #0f2633;
+  border-radius: var(--radius);
+}
+
+.camera-frame video {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.scan-reticle {
+  position: absolute;
+  inset: 23%;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.24);
+}
+
+.scan-reticle::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(15, 122, 138, 0.8);
+}
+
+.camera-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.phone-tip {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  background: var(--accent-soft);
+  border: 1px solid #b8d8df;
+  border-radius: var(--radius);
+}
+
+.phone-tip span {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1445,6 +1523,7 @@ html[data-theme="dark"] .main-start,
 html[data-theme="dark"] .metric-card,
 html[data-theme="dark"] .controls,
 html[data-theme="dark"] .combo-panel,
+html[data-theme="dark"] .mobile-scan-panel,
 html[data-theme="dark"] .qz-panel,
 html[data-theme="dark"] .qz-panel.wbuy-panel,
 html[data-theme="dark"] .separation-panel,
@@ -1466,6 +1545,7 @@ html[data-theme="dark"] .nav-card,
 html[data-theme="dark"] .file-drop,
 html[data-theme="dark"] .combo-preview-strip,
 html[data-theme="dark"] .combo-miniature,
+html[data-theme="dark"] .phone-tip,
 html[data-theme="dark"] .sheet-upload,
 html[data-theme="dark"] .item-list li,
 html[data-theme="dark"] .history-list span,
@@ -1483,6 +1563,7 @@ html[data-theme="dark"] .app-nav,
 html[data-theme="dark"] .topbar,
 html[data-theme="dark"] .controls,
 html[data-theme="dark"] .combo-panel,
+html[data-theme="dark"] .mobile-scan-panel,
 html[data-theme="dark"] .qz-panel,
 html[data-theme="dark"] .separation-panel,
 html[data-theme="dark"] .preview-panel,
@@ -1598,7 +1679,8 @@ dialog::backdrop {
 
   .dashboard-panel,
   .dashboard-start,
-  .status-board {
+  .status-board,
+  .mobile-scan-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1668,6 +1750,7 @@ dialog::backdrop {
 @media (max-width: 620px) {
   .controls,
   .combo-panel,
+  .mobile-scan-panel,
   .qz-panel,
   .result-panel,
   .preview-panel,
@@ -1700,6 +1783,7 @@ dialog::backdrop {
 
   .field-grid,
   .combo-grid,
+  .mobile-scan-layout,
   .summary,
   .print-history,
   .separation-stats,
@@ -1750,6 +1834,15 @@ dialog::backdrop {
 
   .combo-miniature {
     width: 100%;
+  }
+
+  .camera-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .camera-frame,
+  .camera-frame video {
+    min-height: 360px;
   }
 }
 
