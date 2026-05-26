@@ -25,6 +25,7 @@ const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml"
 };
 
@@ -149,6 +150,12 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "GET" && url.pathname === "/") {
       const file = await readFile(join(__dirname, "public", "index.html"));
+      send(res, 200, file, { "Content-Type": mimeTypes[".html"] });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/bip") {
+      const file = await readFile(join(__dirname, "public", "bip.html"));
       send(res, 200, file, { "Content-Type": mimeTypes[".html"] });
       return;
     }

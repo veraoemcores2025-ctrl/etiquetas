@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#071821">
+    <title>Bip celular - Verao em cores</title>
+    <link rel="manifest" href="/assets/bip.webmanifest">
+    <link rel="stylesheet" href="/assets/bip.css">
+  </head>
+  <body>
+    <main class="bip-app">
+      <header class="bip-header">
+        <div class="brand-pill">V</div>
+        <div>
+          <span>Verao em cores</span>
+          <h1>Bip celular</h1>
+        </div>
+      </header>
+
+      <section class="scanner-card">
+        <div class="camera-stage">
+          <video id="camera" playsinline muted></video>
+          <div class="reticle" aria-hidden="true"></div>
+        </div>
+
+        <div class="actions">
+          <button id="startBtn" type="button">Abrir camera</button>
+          <button id="stopBtn" class="secondary" type="button" disabled>Parar</button>
+        </div>
+
+        <label>
+          Ao bipar
+          <select id="scanAction">
+            <option value="separado">Marcar separado</option>
+            <option value="etiquetado">Marcar etiquetado</option>
+            <option value="despachado">Marcar despachado</option>
+            <option value="localizar">Apenas localizar</option>
+          </select>
+        </label>
+
+        <div id="status" class="status">Camera parada.</div>
+      </section>
+
+      <section class="manual-card">
+        <label>
+          Bip manual
+          <input id="manualCode" type="text" inputmode="text" autocomplete="off" placeholder="Digite ou cole o codigo">
+        </label>
+        <button id="manualBtn" type="button">Registrar bip</button>
+      </section>
+
+      <section class="history-card">
+        <div class="history-head">
+          <div>
+            <span>Historico no celular</span>
+            <strong id="historyCount">0 bips</strong>
+          </div>
+          <button id="clearBtn" class="ghost" type="button">Limpar</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <p>Nenhum bip registrado ainda.</p>
+        </div>
+        <button id="copyBtn" class="secondary full" type="button">Copiar lista</button>
+      </section>
+
+      <footer>
+        <a href="/">Abrir painel completo</a>
+      </footer>
+    </main>
+
+    <script src="/assets/bip.js"></script>
+  </body>
+</html>

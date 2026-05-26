@@ -1,0 +1,10 @@
+{
+  "name": "Bip celular Verao em cores",
+  "short_name": "Bip celular",
+  "start_url": "/bip",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#071821",
+  "theme_color": "#071821",
+  "description": "Leitor mobile para bipagem de pedidos e etiquetas."
+}
