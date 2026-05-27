@@ -753,6 +753,14 @@ button.warning:hover {
   background: var(--warn-dark);
 }
 
+button.danger {
+  background: #be123c;
+}
+
+button.danger:hover {
+  background: #9f1239;
+}
+
 .qz-panel {
   display: flex;
   align-items: center;

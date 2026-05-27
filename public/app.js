@@ -1,5 +1,6 @@
 const state = {
   zpl: "",
+  labels: [],
   zplFiles: [],
   batches: [],
   total: 0,
@@ -117,6 +118,7 @@ const printHistoryPanel = document.querySelector("#printHistoryPanel");
 const historyTitle = document.querySelector("#historyTitle");
 const historyText = document.querySelector("#historyText");
 const historyList = document.querySelector("#historyList");
+const removeCurrentDuplicatesBtn = document.querySelector("#removeCurrentDuplicatesBtn");
 const clearHistoryBtn = document.querySelector("#clearHistoryBtn");
 const comboLabelInput = document.querySelector("#comboLabelInput");
 const comboDocInput = document.querySelector("#comboDocInput");
@@ -219,6 +221,10 @@ function getDuplicateRefs(refs = state.labelRefs) {
   });
 }
 
+function getDuplicateKeys(refs = state.labelRefs) {
+  return new Set(getDuplicateRefs(refs).map(labelHistoryKey).filter(Boolean));
+}
+
 function registerPrintedRefs(refs, source) {
   const printedAt = new Date().toISOString();
   refs.forEach(ref => {
@@ -247,7 +253,7 @@ function canPrintRefs(refs, actionName) {
   const duplicates = getDuplicateRefs(refs);
   if (!duplicates.length) return true;
   showStatus(
-    `Atenção: ${duplicates.length} etiqueta(s) já foram impressas nos últimos 7 dias: ${describeDuplicateRefs(duplicates)}. Para ${actionName}, limpe o histórico primeiro.`
+    `Atenção: ${duplicates.length} etiqueta(s) já foram impressas nos últimos 7 dias: ${describeDuplicateRefs(duplicates)}. Para ${actionName}, clique em Excluir repetidas ou limpe o histórico.`
   );
   return false;
 }
@@ -267,6 +273,9 @@ function updateHistoryPanel() {
   historyText.textContent = currentDuplicates.length
     ? "A plataforma bloqueia PDF/impressão repetida para estas etiquetas. O histórico expira automaticamente em 7 dias."
     : "Quando você gerar PDF ou imprimir pela plataforma, as etiquetas ficam marcadas por 7 dias.";
+  if (removeCurrentDuplicatesBtn) {
+    removeCurrentDuplicatesBtn.hidden = !currentDuplicates.length || !state.labels.length;
+  }
   historyList.hidden = !entries.length;
   historyList.innerHTML = entries.slice(0, 12).map(item => `
     <span>
@@ -622,6 +631,7 @@ function updateZplFileSummary() {
 function resetZplOutputs() {
   state.batches = [];
   state.labelRefs = [];
+  state.labels = [];
   summary.hidden = true;
   resultPanel.hidden = true;
   labelPreviewPanel.hidden = true;
@@ -1743,6 +1753,7 @@ function analyzeZplLocally(zpl, requestedBatchSize) {
     total: labels.length,
     rawBlocks: raw.length,
     limit: maxLabels,
+    labels,
     labelRefs: labels.map((label, index) => ({
       ...extractLabelRefs(label),
       fingerprint: simpleHash(label),
@@ -1773,6 +1784,9 @@ function renderBatches() {
     const duplicateBadge = duplicateCount
       ? `<span class="history-badge">Já impressas: ${duplicateCount}</span>`
       : '<span class="history-ok">Sem repetidas</span>';
+    const duplicateAction = duplicateCount
+      ? `<button class="danger" data-action="remove-duplicates" data-index="${batch.index}" type="button">Excluir repetidas</button>`
+      : "";
     return `
     <tr>
       <td><strong>${batch.index}</strong></td>
@@ -1782,11 +1796,85 @@ function renderBatches() {
         <div class="row-actions">
           <button class="secondary" data-action="zpl" data-index="${batch.index}" type="button">Baixar ZPL</button>
           <button data-action="pdf" data-index="${batch.index}" type="button">Baixar PDF</button>
+          ${duplicateAction}
         </div>
       </td>
     </tr>
   `;
   }).join("");
+}
+
+function applyAnalyzedZplData(data) {
+  state.labels = data.labels || [];
+  state.batches = data.batches;
+  state.total = data.total;
+  state.limit = data.limit;
+  state.labelRefs = data.labelRefs;
+  totalLabels.textContent = data.total;
+  totalBatches.textContent = data.batches.length;
+  rawBlocks.textContent = data.rawBlocks || data.total;
+  recommendation.textContent = `${data.total}/${data.limit} etiquetas`;
+  summary.hidden = false;
+}
+
+function rebuildAfterRemovingLabels(removedCount) {
+  if (!state.labels.length) {
+    state.zpl = "";
+    state.zplFiles = [];
+    updateZplFileSummary();
+    resetZplOutputs();
+    showStatus(`${removedCount} etiqueta(s) repetida(s) excluida(s). Nao sobrou etiqueta nova neste arquivo.`);
+    return;
+  }
+
+  state.zpl = state.labels.join("\n");
+  state.zplFiles = [{
+    key: `filtrado-${Date.now()}-${state.labels.length}`,
+    name: "zpl_sem_repetidas.zpl",
+    size: new Blob([state.zpl]).size,
+    lastModified: Date.now(),
+    text: state.zpl
+  }];
+  updateZplFileSummary();
+  const data = analyzeZplLocally(state.zpl, Number(batchSize.value) || 10);
+  applyAnalyzedZplData(data);
+  if (state.separationSource !== "sheet") {
+    state.shopeeOrders = createOrdersFromZplRefs(data.labelRefs);
+    state.separationSource = state.shopeeOrders.length ? "zpl" : "";
+  }
+  renderBatches();
+  renderShopeeSeparation();
+  updateHistoryPanel();
+  updateDashboard();
+  previewZplFirstBatch();
+  showStatus(`${removedCount} etiqueta(s) repetida(s) excluida(s). Agora ficaram ${state.total} etiqueta(s) novas para baixar/imprimir.`);
+}
+
+function removeDuplicateLabels(batchIndex = null) {
+  const refs = batchIndex ? refsForBatch(batchIndex) : state.labelRefs;
+  const duplicateKeys = getDuplicateKeys(refs);
+  if (!duplicateKeys.size) {
+    showStatus("Nao encontrei etiquetas repetidas para excluir neste lote.");
+    return;
+  }
+
+  const keptLabels = [];
+  const keptRefs = [];
+  let removedCount = 0;
+
+  state.labelRefs.forEach((ref, index) => {
+    const key = labelHistoryKey(ref);
+    if (duplicateKeys.has(key)) {
+      removedCount += 1;
+      return;
+    }
+    keptLabels.push(state.labels[index]);
+    keptRefs.push(ref);
+  });
+
+  state.labels = keptLabels.filter(Boolean);
+  state.labelRefs = keptRefs;
+  rebuildAfterRemovingLabels(removedCount);
 }
 
 async function analyze() {
@@ -1797,10 +1885,7 @@ async function analyze() {
 
   try {
     const data = analyzeZplLocally(state.zpl, Number(batchSize.value) || 10);
-    state.batches = data.batches;
-    state.total = data.total;
-    state.limit = data.limit;
-    state.labelRefs = data.labelRefs;
+    applyAnalyzedZplData(data);
     if (state.separationSource !== "sheet") {
       state.shopeeOrders = createOrdersFromZplRefs(data.labelRefs);
       state.separationSource = state.shopeeOrders.length ? "zpl" : "";
@@ -1810,11 +1895,6 @@ async function analyze() {
           ? "ZPL sem dados legiveis para separacao"
           : "Nenhuma planilha selecionada";
     }
-    totalLabels.textContent = data.total;
-    totalBatches.textContent = data.batches.length;
-    rawBlocks.textContent = data.rawBlocks || data.total;
-    recommendation.textContent = `${data.total}/${data.limit} etiquetas`;
-    summary.hidden = false;
     renderBatches();
     renderShopeeSeparation();
     updateHistoryPanel();
@@ -2077,6 +2157,7 @@ downloadWbuyLabelBtn.addEventListener("click", downloadWbuyLabel);
 printWbuyLabelBtn.addEventListener("click", printWbuyLabel);
 downloadSeparationPdfBtn.addEventListener("click", downloadSeparationPdf);
 printSeparationBtn.addEventListener("click", printCompactSeparation);
+removeCurrentDuplicatesBtn.addEventListener("click", () => removeDuplicateLabels());
 clearHistoryBtn.addEventListener("click", clearPrintHistory);
 combinePdfBtn.addEventListener("click", combineLabelAndDocPdf);
 printComboPdfBtn.addEventListener("click", printComboPdf);
@@ -2142,6 +2223,7 @@ batchRows.addEventListener("click", event => {
 
   if (action === "zpl") downloadBatch(index, "zpl");
   if (action === "pdf") downloadBatch(index, "pdf");
+  if (action === "remove-duplicates") removeDuplicateLabels(index);
 });
 
 shopeeRows.addEventListener("click", event => {
